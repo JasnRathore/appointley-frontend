@@ -1,10 +1,8 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import {
-  ArrowRight,
   CalendarDays,
   Link2,
   Plus,
-  Rocket,
   Users,
 } from "lucide-react"
 import { useState } from "react"
@@ -19,30 +17,17 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import {
-  createBookingLink,
   getAuditLogs,
   getBookingLinks,
   getCurrentTeam,
-  getDashboardSummary,
   getMeetings,
 } from "@/lib/api"
+import { CreateLinkDialog } from "@/components/layout/create-link-dialog"
 
 export function DashboardPage() {
-  const queryClient = useQueryClient()
-  const [linkTitle, setLinkTitle] = useState("Advisory Session")
-  const [linkDescription, setLinkDescription] = useState("30-minute client call")
-  const [durationMinutes, setDurationMinutes] = useState(30)
-  const [expirationDays, setExpirationDays] = useState(10)
-  const [timezone, setTimezone] = useState(
-    Intl.DateTimeFormat().resolvedOptions().timeZone
-  )
+  const [showCreateLink, setShowCreateLink] = useState(false)
 
-  const summaryQuery = useQuery({
-    queryKey: ["dashboard-summary"],
-    queryFn: getDashboardSummary,
-  })
   const auditQuery = useQuery({
     queryKey: ["audit-logs"],
     queryFn: getAuditLogs,
@@ -58,13 +43,6 @@ export function DashboardPage() {
   const teamQuery = useQuery({
     queryKey: ["current-team"],
     queryFn: getCurrentTeam,
-  })
-  const createBookingLinkMutation = useMutation({
-    mutationFn: createBookingLink,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["booking-links"] })
-      void queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] })
-    },
   })
 
   const upcomingMeetings =
@@ -92,10 +70,8 @@ export function DashboardPage() {
           <Button asChild variant="outline">
             <Link to="/calendar">View Calendar</Link>
           </Button>
-          <Button asChild>
-            <Link to="/meetings">
-              <Plus className="mr-2 size-4" /> New Meeting
-            </Link>
+          <Button onClick={() => setShowCreateLink(true)}>
+            <Plus className="mr-2 size-4" /> New Booking Link
           </Button>
         </div>
       </div>
@@ -135,62 +111,6 @@ export function DashboardPage() {
 
         <Card className="lg:col-span-3">
           <CardHeader>
-            <CardTitle>Quick Create</CardTitle>
-            <CardDescription>Generate a new booking link instantly.</CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="space-y-2">
-              <Input
-                placeholder="Link Title"
-                value={linkTitle}
-                onChange={(e) => setLinkTitle(e.target.value)}
-              />
-              <Input
-                placeholder="Description"
-                value={linkDescription}
-                onChange={(e) => setLinkDescription(e.target.value)}
-              />
-            </div>
-            <div className="grid grid-cols-2 gap-2">
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-muted-foreground">Duration (min)</p>
-                <Input
-                  type="number"
-                  value={durationMinutes}
-                  onChange={(e) => setDurationMinutes(Number(e.target.value))}
-                />
-              </div>
-              <div className="space-y-1">
-                <p className="text-xs font-medium text-muted-foreground">Expires (days)</p>
-                <Input
-                  type="number"
-                  value={expirationDays}
-                  onChange={(e) => setExpirationDays(Number(e.target.value))}
-                />
-              </div>
-            </div>
-            <Button
-              className="w-full"
-              disabled={createBookingLinkMutation.isPending}
-              onClick={() =>
-                createBookingLinkMutation.mutate({
-                  title: linkTitle,
-                  description: linkDescription,
-                  durationMinutes,
-                  expirationDays,
-                  timezone,
-                })
-              }
-            >
-              {createBookingLinkMutation.isPending ? "Creating..." : "Create Link"}
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
-        <Card>
-          <CardHeader>
             <CardTitle>Active Links</CardTitle>
             <CardDescription>Your recently created booking links.</CardDescription>
           </CardHeader>
@@ -214,11 +134,13 @@ export function DashboardPage() {
               <p className="text-sm text-muted-foreground">No active links.</p>
             )}
             <Button asChild className="w-full" variant="outline">
-              <Link to="/calendar">Manage all links</Link>
+              <Link to="/meetings">Manage all links</Link>
             </Button>
           </CardContent>
         </Card>
+      </div>
 
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-3">
         <Card>
           <CardHeader>
             <CardTitle>Team Snapshot</CardTitle>
@@ -242,7 +164,7 @@ export function DashboardPage() {
           </CardContent>
         </Card>
 
-        <Card>
+        <Card className="lg:col-span-2">
           <CardHeader>
             <CardTitle>Recent Activity</CardTitle>
             <CardDescription>Audit logs and workspace events.</CardDescription>
@@ -262,6 +184,8 @@ export function DashboardPage() {
           </CardContent>
         </Card>
       </div>
+
+      <CreateLinkDialog open={showCreateLink} onOpenChange={setShowCreateLink} />
     </div>
   )
 }

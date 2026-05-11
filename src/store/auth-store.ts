@@ -8,6 +8,7 @@ type AuthSnapshot = {
   accessToken: string | null
   refreshToken: string | null
   user: AuthUser | null
+  activeTeamId: string | null
 }
 
 type AuthState = AuthSnapshot & {
@@ -20,6 +21,7 @@ type AuthState = AuthSnapshot & {
     user: AuthUser,
     oauthEnabled?: boolean
   ) => void
+  setActiveTeamId: (teamId: string | null) => void
   clearSession: () => void
 }
 
@@ -29,6 +31,7 @@ function readStoredAuth(): AuthSnapshot {
       accessToken: null,
       refreshToken: null,
       user: null,
+      activeTeamId: null,
     }
   }
 
@@ -38,6 +41,7 @@ function readStoredAuth(): AuthSnapshot {
       accessToken: null,
       refreshToken: null,
       user: null,
+      activeTeamId: null,
     }
   }
 
@@ -47,12 +51,14 @@ function readStoredAuth(): AuthSnapshot {
       accessToken: parsed.accessToken ?? null,
       refreshToken: parsed.refreshToken ?? null,
       user: parsed.user ?? null,
+      activeTeamId: parsed.activeTeamId ?? null,
     }
   } catch {
     return {
       accessToken: null,
       refreshToken: null,
       user: null,
+      activeTeamId: null,
     }
   }
 }
@@ -74,6 +80,7 @@ export const useAuthStore = create<AuthState>((set) => ({
   accessToken: null,
   refreshToken: null,
   user: null,
+  activeTeamId: null,
   hydrated: false,
   oauthEnabled: false,
   hydrate: () => {
@@ -84,7 +91,8 @@ export const useAuthStore = create<AuthState>((set) => ({
     })
   },
   setSession: (accessToken, refreshToken, user, oauthEnabled = false) => {
-    const snapshot = { accessToken, refreshToken, user }
+    const state = useAuthStore.getState()
+    const snapshot = { accessToken, refreshToken, user, activeTeamId: state.activeTeamId }
     persistAuth(snapshot)
     set({
       ...snapshot,
@@ -92,16 +100,29 @@ export const useAuthStore = create<AuthState>((set) => ({
       hydrated: true,
     })
   },
+  setActiveTeamId: (activeTeamId) => {
+    const state = useAuthStore.getState()
+    const snapshot = {
+      accessToken: state.accessToken,
+      refreshToken: state.refreshToken,
+      user: state.user,
+      activeTeamId,
+    }
+    persistAuth(snapshot)
+    set({ activeTeamId })
+  },
   clearSession: () => {
     persistAuth({
       accessToken: null,
       refreshToken: null,
       user: null,
+      activeTeamId: null,
     })
     set({
       accessToken: null,
       refreshToken: null,
       user: null,
+      activeTeamId: null,
       oauthEnabled: false,
       hydrated: true,
     })

@@ -39,16 +39,21 @@ type RequestOptions = {
   body?: unknown
   auth?: boolean
   retry?: boolean
+  skipTeamId?: boolean
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
-  const { method = "GET", body, auth = true, retry = true } = options
+  const { method = "GET", body, auth = true, retry = true, skipTeamId = false } = options
   const state = useAuthStore.getState()
   const headers = new Headers()
   headers.set("Content-Type", "application/json")
 
   if (auth && state.accessToken) {
     headers.set("Authorization", `Bearer ${state.accessToken}`)
+  }
+
+  if (!skipTeamId && state.activeTeamId) {
+    headers.set("X-Team-ID", state.activeTeamId)
   }
 
   const response = await fetch(`${API_BASE_URL}${path}`, {
@@ -168,6 +173,10 @@ export function getAuditLogs() {
 
 export function getCurrentTeam() {
   return request<TeamDetails>("/api/teams/current")
+}
+
+export function getTeams() {
+  return request<TeamSummary[]>("/api/teams", { skipTeamId: true })
 }
 
 export function createTeam(payload: { name: string }) {
