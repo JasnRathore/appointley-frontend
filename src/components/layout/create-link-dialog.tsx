@@ -1,6 +1,5 @@
-import * as React from "react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
-import { useForm } from "react-hook-form"
+import { type UseFormReturn, useForm } from "react-hook-form"
 import { zodResolver } from "@hookform/resolvers/zod"
 import * as z from "zod"
 
@@ -27,9 +26,11 @@ import { createBookingLink } from "@/lib/api"
 const formSchema = z.object({
   title: z.string().min(2, "Title must be at least 2 characters."),
   description: z.string().optional(),
-  durationMinutes: z.coerce.number().min(1, "Duration must be at least 1 minute."),
-  expirationDays: z.coerce.number().min(1, "Expiration must be at least 1 day."),
+  durationMinutes: z.number().min(1, "Duration must be at least 1 minute."),
+  expirationDays: z.number().min(1, "Expiration must be at least 1 day."),
 })
+
+type FormValues = z.infer<typeof formSchema>
 
 export function CreateLinkDialog({
   open,
@@ -40,7 +41,7 @@ export function CreateLinkDialog({
 }) {
   const queryClient = useQueryClient()
 
-  const form = useForm<z.infer<typeof formSchema>>({
+  const form: UseFormReturn<FormValues> = useForm<FormValues>({
     resolver: zodResolver(formSchema),
     defaultValues: {
       title: "Advisory Session",
@@ -60,9 +61,12 @@ export function CreateLinkDialog({
     },
   })
 
-  function onSubmit(values: z.infer<typeof formSchema>) {
+  function onSubmit(values: FormValues) {
     mutation.mutate({
-      ...values,
+      title: values.title,
+      description: values.description,
+      durationMinutes: values.durationMinutes,
+      expirationDays: values.expirationDays,
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     })
   }
@@ -112,7 +116,11 @@ export function CreateLinkDialog({
                   <FormItem>
                     <FormLabel>Duration (min)</FormLabel>
                     <FormControl>
-                      <Input type="number" {...field} />
+                      <Input 
+                        type="number" 
+                        {...field} 
+                        onChange={(e) => field.onChange(e.target.valueAsNumber || 0)} 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>
@@ -125,7 +133,11 @@ export function CreateLinkDialog({
                   <FormItem>
                     <FormLabel>Expires (days)</FormLabel>
                     <FormControl>
-                      <Input type="number" {...field} />
+                      <Input 
+                        type="number" 
+                        {...field} 
+                        onChange={(e) => field.onChange(e.target.valueAsNumber || 0)} 
+                      />
                     </FormControl>
                     <FormMessage />
                   </FormItem>

@@ -1,6 +1,5 @@
 import { useQuery } from "@tanstack/react-query"
 import {
-  CalendarDays,
   Link2,
   Plus,
   Users,

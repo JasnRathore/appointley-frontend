@@ -15,6 +15,7 @@ export type AuthUser = {
   fullName: string
   email: string
   authProvider: AuthProvider
+  avatarUrl?: string
 }
 
 export type AuthResponse = {

@@ -1,17 +1,9 @@
 import { useQuery } from "@tanstack/react-query"
-import { ChevronLeft, ChevronRight, Grid2x2, Rows3, Timer, Settings2, ShieldAlert } from "lucide-react"
+import { ChevronLeft, ChevronRight, Grid2x2, Timer, Settings2, ShieldAlert, Rows3 } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
 import {
   getAvailabilityRules,
   getBlockedDates,
@@ -31,11 +23,10 @@ import {
   minutesSinceHourStart,
   shiftCalendarDate,
   sortMeetings,
-  startOfDay,
   formatTimeLabel,
   type CalendarView,
 } from "@/lib/calendar"
-import type { AvailabilityRuleInput, BlockedDate, Meeting } from "@/lib/types"
+import type { AvailabilityRuleInput, Meeting } from "@/lib/types"
 import { AvailabilityRulesDialog } from "@/components/layout/availability-rules-dialog"
 import { BlockedWindowsDialog } from "@/components/layout/blocked-windows-dialog"
 
@@ -264,7 +255,6 @@ function PlannerViewButton({
 }
 
 function MonthPlanner({
-  blockedDates,
   meetings,
   selectedDate,
   onSelectDate,
@@ -331,12 +321,9 @@ function MonthPlanner({
 }
 
 function TimePlanner({
-  blockedDates,
   days,
   hours,
   meetings,
-  selectedDate,
-  onSelectDate,
 }: any) {
   const columnTemplate = `60px repeat(${days.length}, 1fr)`
   const totalHeight = hours.length * plannerHourHeight
@@ -511,65 +498,10 @@ function getEventLayouts(meetings: Meeting[]) {
   }))
 }
 
-function getBlockedLayouts(day: Date, blockedDates: BlockedDate[]) {
-  const dayStart = startOfDay(day)
-  const viewStart = new Date(dayStart)
-  viewStart.setHours(plannerStartHour, 0, 0, 0)
-  const viewEnd = new Date(dayStart)
-  viewEnd.setHours(plannerEndHour, 0, 0, 0)
-
-  return blockedDates
-    .filter((blockedDate) => doesBlockedDateIntersectDay(blockedDate, day))
-    .map((blockedDate) => {
-      const startsAt = new Date(blockedDate.startsAt)
-      const endsAt = new Date(blockedDate.endsAt)
-      const clippedStart = startsAt > viewStart ? startsAt : viewStart
-      const clippedEnd = endsAt < viewEnd ? endsAt : viewEnd
-      const minutesFromTop =
-        (clippedStart.getHours() - plannerStartHour) * 60 + clippedStart.getMinutes()
-      const durationMinutes = Math.max(
-        20,
-        (clippedEnd.getTime() - clippedStart.getTime()) / 60000
-      )
-
-      return {
-        id: blockedDate.id,
-        top: (minutesFromTop / 60) * plannerHourHeight,
-        height: (durationMinutes / 60) * plannerHourHeight,
-        reason: blockedDate.reason,
-      }
-    })
-}
-
-function doesBlockedDateIntersectDay(blockedDate: BlockedDate, day: Date) {
-  const dayStart = startOfDay(day)
-  const nextDay = new Date(dayStart)
-  nextDay.setDate(nextDay.getDate() + 1)
-  const blockedStart = new Date(blockedDate.startsAt)
-  const blockedEnd = new Date(blockedDate.endsAt)
-
-  return blockedStart < nextDay && blockedEnd > dayStart
-}
-
 function formatHourLabel(hour: number) {
   const date = new Date()
   date.setHours(hour, 0, 0, 0)
   return new Intl.DateTimeFormat(undefined, {
     hour: "numeric",
   }).format(date)
-}
-
-function getCurrentTimeOffset(day: Date) {
-  const now = new Date()
-  if (!isSameDay(now, day)) {
-    return null
-  }
-
-  const offset = minutesSinceHourStart(now, plannerStartHour)
-  const maxOffset = (plannerEndHour - plannerStartHour) * 60
-  if (offset < 0 || offset > maxOffset) {
-    return null
-  }
-
-  return (offset / 60) * plannerHourHeight
 }
