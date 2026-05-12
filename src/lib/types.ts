@@ -110,6 +110,8 @@ export type BookingLink = {
   durationMinutes: number
   timezone: string
   bookingUrl: string
+  recipientEmail: string | null
+  oneTimeUse: boolean
 }
 
 export type PublicSlot = {
@@ -124,11 +126,13 @@ export type PublicBookingLink = {
   durationMinutes: number
   expiresAt: string
   slots: PublicSlot[]
+  recipientEmail: string | null
 }
 
 export type Meeting = {
   id: string
   bookingLinkTitle: string
+  bookingLinkToken: string
   clientName: string
   clientEmail: string
   startsAt: string
@@ -144,6 +148,20 @@ export type Settings = {
   teamName: string
   senderName: string
   oauthEnabled: boolean
+  emailOnBooking: boolean
+  inAppOnBooking: boolean
+  weeklyDigest: boolean
+  marketingEmails: boolean
+}
+
+export type Notification = {
+  id: string
+  title: string
+  message: string
+  type: string
+  isRead: boolean
+  actionUrl: string | null
+  createdAt: string
 }
 
 export type ApiErrorBody = {

@@ -9,12 +9,19 @@ import { LoginPage } from "@/pages/login-page"
 import { MeetingsPage } from "@/pages/meetings-page"
 import { RegisterPage } from "@/pages/register-page"
 import { SettingsPage } from "@/pages/settings-page"
+import { NotificationsPage } from "@/pages/notifications-page"
 import { TeamPage } from "@/pages/team-page"
+import { ManageBookingPage } from "@/pages/manage-booking-page"
+import HomePage from "@/pages/home-page"
 
 export const router = createBrowserRouter([
-  {
+//  {
+//    path: "/",
+//    element: <Navigate to="/dashboard" replace />,
+//  },
+{
     path: "/",
-    element: <Navigate to="/dashboard" replace />,
+    element: <HomePage />,
   },
   {
     path: "/login",
@@ -35,6 +42,10 @@ export const router = createBrowserRouter([
   {
     path: "/book/:token",
     element: <BookingPage />,
+  },
+  {
+    path: "/manage-booking/:meetingId",
+    element: <ManageBookingPage />,
   },
   {
     path: "/",
@@ -59,6 +70,10 @@ export const router = createBrowserRouter([
       {
         path: "settings",
         element: <SettingsPage />,
+      },
+      {
+        path: "notifications",
+        element: <NotificationsPage />,
       },
     ],
   },

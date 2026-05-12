@@ -10,6 +10,7 @@ import type {
   BookingLink,
   DashboardSummary,
   Meeting,
+  Notification,
   OAuthStatusResponse,
   PublicBookingLink,
   Settings,
@@ -250,6 +251,8 @@ export function createBookingLink(payload: {
   expirationDays?: number
   durationMinutes?: number
   timezone: string
+  recipientEmail?: string
+  oneTimeUse?: boolean
 }) {
   return request<BookingLink>("/api/booking-links", {
     method: "POST",
@@ -267,6 +270,13 @@ export function cancelMeeting(meetingId: string) {
   })
 }
 
+export function rescheduleMeeting(meetingId: string, payload: { newStartsAt: string }) {
+  return request<Meeting>(`/api/meetings/${meetingId}/reschedule`, {
+    method: "POST",
+    body: payload,
+  })
+}
+
 export function getSettings() {
   return request<Settings>("/api/settings")
 }
@@ -275,10 +285,60 @@ export function updateSettings(payload: {
   fullName: string
   teamName: string
   senderName: string
+  emailOnBooking: boolean
+  inAppOnBooking: boolean
+  weeklyDigest: boolean
+  marketingEmails: boolean
 }) {
   return request<Settings>("/api/settings", {
     method: "PUT",
     body: payload,
+  })
+}
+
+export function updatePassword(payload: { currentPassword: string; newPassword: string }) {
+  return request<void>("/api/settings/password", {
+    method: "PUT",
+    body: payload,
+  })
+}
+
+export function deleteAccount() {
+  return request<void>("/api/settings/account", {
+    method: "DELETE",
+  })
+}
+
+export async function logoutEverywhere() {
+  const state = useAuthStore.getState()
+  const headers = new Headers()
+  if (state.accessToken) {
+    headers.set("Authorization", `Bearer ${state.accessToken}`)
+  }
+  await fetch(`${API_BASE_URL}/api/auth/logout-everywhere`, {
+    method: "POST",
+    headers,
+  })
+  state.clearSession()
+}
+
+export function getNotifications() {
+  return request<Notification[]>("/api/notifications")
+}
+
+export function getUnreadCount() {
+  return request<number>("/api/notifications/unread-count")
+}
+
+export function markNotificationAsRead(id: string) {
+  return request<void>(`/api/notifications/${id}/read`, {
+    method: "PATCH",
+  })
+}
+
+export function markAllNotificationsAsRead() {
+  return request<void>("/api/notifications/mark-all-read", {
+    method: "POST",
   })
 }
 
@@ -298,6 +358,27 @@ export function bookPublicMeeting(
   }
 ) {
   return request<Meeting>(`/api/public/booking-links/${token}/meetings`, {
+    method: "POST",
+    auth: false,
+    body: payload,
+  })
+}
+
+export function getPublicMeeting(meetingId: string) {
+  return request<Meeting>(`/api/public/meetings/${meetingId}`, {
+    auth: false,
+  })
+}
+
+export function cancelPublicMeeting(meetingId: string) {
+  return request<Meeting>(`/api/public/meetings/${meetingId}/cancel`, {
+    method: "POST",
+    auth: false,
+  })
+}
+
+export function reschedulePublicMeeting(meetingId: string, payload: { newStartsAt: string }) {
+  return request<Meeting>(`/api/public/meetings/${meetingId}/reschedule`, {
     method: "POST",
     auth: false,
     body: payload,

@@ -18,9 +18,11 @@ import {
   FormItem,
   FormLabel,
   FormMessage,
+  FormDescription,
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
+import { Switch } from "@/components/ui/switch"
 import { createBookingLink } from "@/lib/api"
 
 const formSchema = z.object({
@@ -28,6 +30,8 @@ const formSchema = z.object({
   description: z.string().optional(),
   durationMinutes: z.number().min(1, "Duration must be at least 1 minute."),
   expirationDays: z.number().min(1, "Expiration must be at least 1 day."),
+  recipientEmail: z.string().email("Invalid email").optional().or(z.literal("")),
+  oneTimeUse: z.boolean(),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -48,6 +52,8 @@ export function CreateLinkDialog({
       description: "30-minute client call",
       durationMinutes: 30,
       expirationDays: 10,
+      recipientEmail: "",
+      oneTimeUse: false,
     },
   })
 
@@ -68,6 +74,8 @@ export function CreateLinkDialog({
       durationMinutes: values.durationMinutes,
       expirationDays: values.expirationDays,
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      recipientEmail: values.recipientEmail || undefined,
+      oneTimeUse: values.oneTimeUse,
     })
   }
 
@@ -75,9 +83,9 @@ export function CreateLinkDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Create Booking Link</DialogTitle>
+          <DialogTitle>Create Targeted Link</DialogTitle>
           <DialogDescription>
-            Generate a new link that clients can use to book meetings with you.
+            Generate a special link for a specific recipient or a one-time use session.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -95,19 +103,24 @@ export function CreateLinkDialog({
                 </FormItem>
               )}
             />
+            
             <FormField
               control={form.control}
-              name="description"
+              name="recipientEmail"
               render={({ field }) => (
                 <FormItem>
-                  <FormLabel>Description</FormLabel>
+                  <FormLabel>Recipient Email (Optional)</FormLabel>
                   <FormControl>
-                    <Input placeholder="30-minute client call" {...field} />
+                    <Input placeholder="client@example.com" {...field} />
                   </FormControl>
+                  <FormDescription className="text-[10px]">
+                    If set, the link will be emailed to them and only they can book.
+                  </FormDescription>
                   <FormMessage />
                 </FormItem>
               )}
             />
+
             <div className="grid grid-cols-2 gap-4">
               <FormField
                 control={form.control}
@@ -144,9 +157,31 @@ export function CreateLinkDialog({
                 )}
               />
             </div>
-            <DialogFooter>
-              <Button type="submit" disabled={mutation.isPending}>
-                {mutation.isPending ? "Creating..." : "Create Link"}
+
+            <FormField
+              control={form.control}
+              name="oneTimeUse"
+              render={({ field }) => (
+                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
+                  <div className="space-y-0.5">
+                    <FormLabel>One-time use</FormLabel>
+                    <FormDescription className="text-[10px]">
+                      Deactivate link after the first booking.
+                    </FormDescription>
+                  </div>
+                  <FormControl>
+                    <Switch
+                      checked={field.value}
+                      onCheckedChange={field.onChange}
+                    />
+                  </FormControl>
+                </FormItem>
+              )}
+            />
+
+            <DialogFooter className="pt-2">
+              <Button type="submit" className="w-full" disabled={mutation.isPending}>
+                {mutation.isPending ? "Generating..." : "Generate & Send Link"}
               </Button>
             </DialogFooter>
           </form>

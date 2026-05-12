@@ -1,10 +1,15 @@
-import { useQuery } from "@tanstack/react-query"
-import { ChevronLeft, ChevronRight, Grid2x2, Timer, Settings2, ShieldAlert, Rows3 } from "lucide-react"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { ChevronLeft, ChevronRight, Grid2x2, Timer, Settings2, ShieldAlert, Rows3, CalendarClock, Users, Clock, Calendar as CalendarIcon, XCircle, ExternalLink } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
+import { format, parseISO } from "date-fns"
+import * as React from "react"
 
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
+import { Badge } from "@/components/ui/badge"
+import { Label } from "@/components/ui/label"
 import {
+  cancelMeeting,
   getAvailabilityRules,
   getBlockedDates,
   getMeetings,
@@ -29,17 +34,42 @@ import {
 import type { AvailabilityRuleInput, Meeting } from "@/lib/types"
 import { AvailabilityRulesDialog } from "@/components/layout/availability-rules-dialog"
 import { BlockedWindowsDialog } from "@/components/layout/blocked-windows-dialog"
+import { RescheduleDialog } from "@/components/layout/reschedule-dialog"
+import { cn } from "@/lib/utils"
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog"
 
 const plannerStartHour = 6
 const plannerEndHour = 22
-const plannerHourHeight = 72
+const plannerHourHeight = 80 // Increased for better readability
 
 export function CalendarPage() {
+  const queryClient = useQueryClient()
   const [view, setView] = useState<CalendarView>("week")
   const [selectedDate, setSelectedDate] = useState(() => new Date())
   const [rules, setRules] = useState<AvailabilityRuleInput[]>([])
   const [showRulesDialog, setShowRulesDialog] = useState(false)
   const [showBlockedDialog, setShowBlockedDialog] = useState(false)
+  
+  const [activeMeeting, setActiveMeeting] = useState<Meeting | null>(null)
+  const [showDetails, setShowDetails] = useState(false)
+  const [showReschedule, setShowReschedule] = useState(false)
+
+  const cancelMutation = useMutation({
+    mutationFn: cancelMeeting,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["meetings"] })
+      void queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] })
+      setShowDetails(false)
+      setActiveMeeting(null)
+    },
+  })
 
   const rulesQuery = useQuery({
     queryKey: ["availability-rules"],
@@ -75,32 +105,33 @@ export function CalendarPage() {
       ),
     [meetingsQuery.data]
   )
+  
   const blockedDates = blockedDatesQuery.data ?? []
-  const plannerDays =
-    view === "day" ? [selectedDate] : view === "week" ? getWeekDays(selectedDate) : []
+  const plannerDays = useMemo(() => 
+    view === "day" ? [selectedDate] : view === "week" ? getWeekDays(selectedDate) : [],
+    [view, selectedDate]
+  )
   const selectedDayMeetings = getDayMeetings(scheduledMeetings, selectedDate)
   const activeRules = rules.filter((rule) => rule.active)
   const hours = getHoursRange(plannerStartHour, plannerEndHour)
 
   return (
-    <div className="flex h-[calc(100vh-10rem)] flex-col gap-4 overflow-hidden">
-      <div className="flex flex-col gap-4 xl:flex-row xl:items-center xl:justify-between px-4 pt-4">
-        <div className="flex items-center gap-4">
-          <h2 className="text-2xl font-bold tracking-tight">
-            {formatToolbarLabel(view, selectedDate)}
-          </h2>
-          <div className="flex items-center gap-1 rounded-md border p-1 bg-muted/20">
+    <div className="flex h-[calc(100vh-10rem)] flex-col gap-6 overflow-hidden">
+      {/* Header Section */}
+      <div className="flex flex-col gap-6 lg:flex-row lg:items-center lg:justify-between px-6 pt-2">
+        <div className="flex items-center gap-6">
+          <div className="flex items-center gap-1 rounded-2xl border p-1 bg-muted/30 shadow-sm ml-2">
             <Button
               size="icon"
               variant="ghost"
-              className="size-8"
+              className="size-9 rounded-xl hover:bg-background hover:shadow-sm transition-all"
               onClick={() => setSelectedDate(shiftCalendarDate(view, selectedDate, -1))}
             >
-              <ChevronLeft className="size-4" />
+              <ChevronLeft className="size-5" />
             </Button>
             <Button 
               variant="ghost" 
-              className="h-8 px-3 text-xs font-medium"
+              className="h-9 px-4 text-xs font-bold uppercase tracking-widest hover:bg-background hover:shadow-sm transition-all"
               onClick={() => setSelectedDate(new Date())}
             >
               Today
@@ -108,16 +139,16 @@ export function CalendarPage() {
             <Button
               size="icon"
               variant="ghost"
-              className="size-8"
+              className="size-9 rounded-xl hover:bg-background hover:shadow-sm transition-all"
               onClick={() => setSelectedDate(shiftCalendarDate(view, selectedDate, 1))}
             >
-              <ChevronRight className="size-4" />
+              <ChevronRight className="size-5" />
             </Button>
           </div>
         </div>
 
-        <div className="flex items-center gap-2">
-          <div className="flex items-center gap-1 rounded-md border p-1 bg-muted/20 mr-4">
+        <div className="flex items-center gap-3">
+          <div className="flex items-center gap-1 rounded-2xl border p-1 bg-muted/30 shadow-sm mr-2">
             <PlannerViewButton
               active={view === "day"}
               icon={Timer}
@@ -137,71 +168,90 @@ export function CalendarPage() {
               onClick={() => setView("month")}
             />
           </div>
-          <Button variant="outline" size="sm" onClick={() => setShowRulesDialog(true)}>
-            <Settings2 className="mr-2 size-4" /> Availability
+          
+          <div className="h-8 w-px bg-border mx-2 hidden lg:block" />
+          
+          <Button variant="outline" size="sm" onClick={() => setShowRulesDialog(true)} className="rounded-xl font-semibold border-none ring-1 ring-border/50 hover:ring-primary/50 transition-all">
+            <Settings2 className="mr-2 size-4 text-primary" /> Availability
           </Button>
-          <Button variant="outline" size="sm" onClick={() => setShowBlockedDialog(true)}>
-            <ShieldAlert className="mr-2 size-4" /> Blocked
+          <Button variant="outline" size="sm" onClick={() => setShowBlockedDialog(true)} className="rounded-xl font-semibold border-none ring-1 ring-border/50 hover:ring-destructive/50 transition-all">
+            <ShieldAlert className="mr-2 size-4 text-destructive" /> Blocked
           </Button>
         </div>
       </div>
 
-      <div className="grid flex-1 gap-4 overflow-hidden xl:grid-cols-[280px_1fr]">
-        <aside className="hidden xl:flex flex-col gap-6 overflow-y-auto border-r px-4 py-2">
-          <div className="rounded-lg border bg-card">
+      <div className="grid flex-1 gap-8 overflow-hidden lg:grid-cols-[300px_1fr] px-6 pb-4">
+        {/* Sidebar */}
+        <aside className="hidden lg:flex flex-col gap-8 overflow-y-auto pr-4 border-r border-border/50">
+          <div className="rounded-2xl border bg-card shadow-sm overflow-hidden p-1">
             <Calendar
               mode="single"
               selected={selectedDate}
               onSelect={(date) => date && setSelectedDate(date)}
-              className="p-3"
+              className="w-full"
             />
           </div>
 
-          <div className="space-y-4">
-            <div className="px-2">
-              <h3 className="text-sm font-semibold mb-3">Upcoming Today</h3>
+          <div className="space-y-6">
+            <div>
+              <div className="flex items-center justify-between mb-4 px-1">
+                <h3 className="text-xs font-bold uppercase tracking-widest text-muted-foreground">Upcoming Today</h3>
+                <Badge variant="outline" className="text-[10px] rounded-full border-primary/20 text-primary">{selectedDayMeetings.length}</Badge>
+              </div>
               <div className="space-y-3">
-                {selectedDayMeetings.slice(0, 3).map((meeting) => (
-                  <div key={meeting.id} className="rounded-md border p-3 bg-muted/10">
-                    <p className="text-xs font-semibold truncate">{meeting.clientName}</p>
-                    <p className="text-[10px] text-muted-foreground mt-1">
+                {selectedDayMeetings.slice(0, 4).map((meeting) => (
+                  <div key={meeting.id} className="group relative rounded-2xl border border-transparent hover:border-border hover:bg-muted/30 p-4 transition-all cursor-default">
+                    <div className="flex items-center gap-3 mb-2">
+                       <div className="flex size-8 items-center justify-center rounded-full bg-primary/10 text-primary font-bold text-[10px]">
+                         {meeting.clientName.charAt(0)}
+                       </div>
+                       <p className="text-sm font-bold truncate group-hover:text-primary transition-colors">{meeting.clientName}</p>
+                    </div>
+                    <div className="flex items-center gap-2 text-[10px] text-muted-foreground font-medium">
+                      <Clock className="size-3" />
                       {describeRange(meeting.startsAt, meeting.endsAt)}
-                    </p>
+                    </div>
                   </div>
                 ))}
                 {selectedDayMeetings.length === 0 && (
-                  <p className="text-xs text-muted-foreground italic px-1">No meetings today.</p>
+                  <div className="flex flex-col items-center justify-center py-10 text-center opacity-40">
+                    <CalendarIcon className="size-8 mb-2" />
+                    <p className="text-xs font-medium italic">No meetings scheduled.</p>
+                  </div>
                 )}
               </div>
             </div>
 
-            <div className="px-2">
-              <h3 className="text-sm font-semibold mb-3">Availability</h3>
-              <div className="space-y-2">
-                <p className="text-xs text-muted-foreground">
-                  {activeRules.length} weekly windows active.
-                </p>
-                <Button 
-                  variant="link" 
-                  size="sm" 
-                  className="h-auto p-0 text-xs"
-                  onClick={() => setShowRulesDialog(true)}
-                >
-                  Edit availability rules
-                </Button>
-              </div>
+            <div className="rounded-2xl bg-primary/5 border border-primary/10 p-6">
+               <h3 className="text-sm font-bold mb-2">Want to change your hours?</h3>
+               <p className="text-xs text-muted-foreground leading-relaxed mb-4">
+                 Your weekly availability determines when clients can book sessions with you.
+               </p>
+               <Button 
+                variant="link" 
+                size="sm" 
+                className="h-auto p-0 text-xs font-bold text-primary hover:no-underline"
+                onClick={() => setShowRulesDialog(true)}
+              >
+                Update Weekly Schedule →
+              </Button>
             </div>
           </div>
         </aside>
 
-        <main className="flex-1 overflow-hidden rounded-tl-xl border-l border-t bg-card shadow-sm">
-          <div className="h-full overflow-y-auto">
+        {/* Main Calendar View */}
+        <main className="flex-1 overflow-hidden rounded-2xl border border-border/50 bg-card/50 shadow-2xl backdrop-blur-sm">
+          <div className="h-full overflow-y-auto custom-scrollbar">
             {view === "month" ? (
               <MonthPlanner
                 blockedDates={blockedDates}
                 meetings={scheduledMeetings}
                 selectedDate={selectedDate}
                 onSelectDate={setSelectedDate}
+                onSelectMeeting={(m: Meeting) => {
+                  setActiveMeeting(m)
+                  setShowDetails(true)
+                }}
               />
             ) : (
               <TimePlanner
@@ -211,6 +261,10 @@ export function CalendarPage() {
                 meetings={scheduledMeetings}
                 selectedDate={selectedDate}
                 onSelectDate={setSelectedDate}
+                onSelectMeeting={(m: Meeting) => {
+                  setActiveMeeting(m)
+                  setShowDetails(true)
+                }}
               />
             )}
           </div>
@@ -226,6 +280,79 @@ export function CalendarPage() {
         open={showBlockedDialog} 
         onOpenChange={setShowBlockedDialog} 
       />
+
+      <RescheduleDialog 
+        open={showReschedule} 
+        onOpenChange={setShowReschedule} 
+        meeting={activeMeeting} 
+      />
+
+      <Dialog open={showDetails} onOpenChange={setShowDetails}>
+        <DialogContent className="sm:max-w-[425px] p-0 overflow-hidden border-none ring-1 ring-border/50 shadow-2xl">
+          <DialogHeader className="p-6 pb-2 bg-muted/20">
+            <div className="flex items-center gap-3 mb-2">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <CalendarIcon className="size-5" />
+              </div>
+              <div>
+                <DialogTitle className="text-xl font-bold">Meeting Details</DialogTitle>
+                <DialogDescription>
+                  View or manage your appointment.
+                </DialogDescription>
+              </div>
+            </div>
+          </DialogHeader>
+          
+          <div className="p-6 space-y-6">
+            <div className="space-y-4">
+              <div>
+                <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1 block">Client</Label>
+                <p className="text-lg font-bold">{activeMeeting?.clientName}</p>
+                <p className="text-sm text-muted-foreground">{activeMeeting?.clientEmail}</p>
+              </div>
+              
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1 block">Date</Label>
+                  <p className="text-sm font-semibold">{activeMeeting ? format(parseISO(activeMeeting.startsAt), "MMM d, yyyy") : ""}</p>
+                </div>
+                <div>
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1 block">Time</Label>
+                  <p className="text-sm font-semibold">{activeMeeting ? formatTimeLabel(new Date(activeMeeting.startsAt)) : ""}</p>
+                </div>
+              </div>
+
+              {activeMeeting?.notes && (
+                <div>
+                  <Label className="text-[10px] font-bold uppercase tracking-widest text-muted-foreground mb-1 block">Notes</Label>
+                  <p className="text-sm bg-muted/30 p-3 rounded-lg border border-border/50">{activeMeeting.notes}</p>
+                </div>
+              )}
+            </div>
+
+            <div className="grid grid-cols-2 gap-3 pt-2">
+              <Button 
+                variant="outline" 
+                className="rounded-xl font-bold gap-2" 
+                onClick={() => {
+                  setShowDetails(false)
+                  setShowReschedule(true)
+                }}
+              >
+                <ExternalLink className="size-4" /> Reschedule
+              </Button>
+              <Button 
+                variant="outline" 
+                className="rounded-xl font-bold gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
+                onClick={() => cancelMutation.mutate(activeMeeting!.id)}
+                disabled={cancelMutation.isPending}
+              >
+                <XCircle className="size-4" /> {cancelMutation.isPending ? "Canceling..." : "Cancel Meeting"}
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
@@ -245,7 +372,10 @@ function PlannerViewButton({
     <Button
       size="sm"
       variant={active ? "secondary" : "ghost"}
-      className="h-8 px-3 text-xs"
+      className={cn(
+        "h-9 px-4 text-xs font-bold uppercase tracking-widest transition-all",
+        active ? "bg-background shadow-sm text-foreground rounded-xl" : "text-muted-foreground hover:bg-background/50 rounded-xl"
+      )}
       onClick={onClick}
     >
       <Icon className="mr-2 size-3" />
@@ -258,6 +388,7 @@ function MonthPlanner({
   meetings,
   selectedDate,
   onSelectDate,
+  onSelectMeeting,
 }: any) {
   const weeks = chunkIntoWeeks(getMonthGridDays(selectedDate))
 
@@ -267,7 +398,7 @@ function MonthPlanner({
         {getWeekDays(selectedDate).map((day) => (
           <div
             key={day.toISOString()}
-            className="px-4 py-2 text-[10px] font-bold uppercase tracking-wider text-muted-foreground text-center"
+            className="px-4 py-4 text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 text-center"
           >
             {formatWeekdayLabel(day).split(" ")[0]}
           </div>
@@ -285,28 +416,40 @@ function MonthPlanner({
               return (
                 <button
                   key={day.toISOString()}
-                  className={`min-h-[120px] border-r border-b p-2 text-left transition-colors hover:bg-muted/5 ${!currentMonth ? "opacity-40" : ""}`}
+                  className={cn(
+                    "min-h-[140px] border-r border-b p-3 text-left transition-all hover:bg-muted/10 last:border-r-0 group",
+                    !currentMonth && "bg-muted/5 opacity-30"
+                  )}
                   onClick={() => onSelectDate(day)}
                 >
-                  <div className="flex justify-center mb-2">
+                  <div className="flex items-center justify-between mb-3">
                     <span
-                      className={`flex size-7 items-center justify-center rounded-full text-xs font-semibold ${isSelected ? "bg-primary text-primary-foreground" : isToday ? "bg-primary/10 text-primary" : ""}`}
+                      className={cn(
+                        "flex size-8 items-center justify-center rounded-xl text-sm font-bold transition-all",
+                        isSelected ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30" : 
+                        isToday ? "bg-primary/10 text-primary" : "text-muted-foreground group-hover:text-foreground"
+                      )}
                     >
                       {day.getDate()}
                     </span>
+                    {dayMeetings.length > 0 && <div className="size-1.5 rounded-full bg-primary/40" />}
                   </div>
-                  <div className="space-y-1">
-                    {dayMeetings.slice(0, 2).map((meeting: any) => (
+                  <div className="space-y-1.5">
+                    {dayMeetings.slice(0, 3).map((meeting: any) => (
                       <div
                         key={meeting.id}
-                        className="truncate rounded px-2 py-1 text-[10px] font-medium bg-primary/10 text-primary border-l-2 border-primary"
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          onSelectMeeting(meeting)
+                        }}
+                        className="truncate rounded-lg px-2.5 py-1.5 text-[10px] font-bold bg-primary/5 text-primary border-l-2 border-primary shadow-sm hover:bg-primary/10 transition-colors cursor-pointer"
                       >
                         {meeting.clientName}
                       </div>
                     ))}
-                    {dayMeetings.length > 2 && (
-                      <p className="text-[10px] text-muted-foreground px-2">
-                        +{dayMeetings.length - 2} more
+                    {dayMeetings.length > 3 && (
+                      <p className="text-[10px] font-bold text-muted-foreground px-2 pt-1">
+                        +{dayMeetings.length - 3} more
                       </p>
                     )}
                   </div>
@@ -324,33 +467,41 @@ function TimePlanner({
   days,
   hours,
   meetings,
+  onSelectMeeting,
 }: any) {
-  const columnTemplate = `60px repeat(${days.length}, 1fr)`
+  const columnTemplate = `72px repeat(${days.length}, 1fr)`
   const totalHeight = hours.length * plannerHourHeight
 
   return (
     <div className="h-full overflow-x-auto">
-      <div className="min-w-[800px] h-full flex flex-col">
+      <div className="min-w-[1000px] h-full flex flex-col">
+        {/* Planner Header */}
         <div
-          className="grid border-b sticky top-0 bg-card z-20"
+          className="grid border-b sticky top-0 bg-card/90 backdrop-blur-md z-20 shadow-sm"
           style={{ gridTemplateColumns: columnTemplate }}
         >
-          <div className="border-r" />
+          <div className="border-r border-border/50" />
           {days.map((day: any) => (
             <div
               key={day.toISOString()}
-              className="px-4 py-3 text-center border-r last:border-0"
+              className="px-4 py-5 text-center border-r border-border/50 last:border-r-0"
             >
-              <p className="text-[10px] font-bold uppercase tracking-wider text-muted-foreground">
+              <p className="text-[10px] font-bold uppercase tracking-[0.2em] text-muted-foreground/60 mb-1.5">
                 {formatWeekdayLabel(day).split(" ")[0]}
               </p>
-              <p className={`mt-1 text-lg font-semibold ${isSameDay(day, new Date()) ? "text-primary" : ""}`}>
-                {day.getDate()}
-              </p>
+              <div className="flex justify-center">
+                <span className={cn(
+                  "size-10 flex items-center justify-center rounded-xl text-xl font-bold transition-all",
+                  isSameDay(day, new Date()) ? "bg-primary text-primary-foreground shadow-lg shadow-primary/30" : "text-foreground"
+                )}>
+                  {day.getDate()}
+                </span>
+              </div>
             </div>
           ))}
         </div>
 
+        {/* Planner Body */}
         <div className="flex-1 relative">
           <div
             className="grid absolute inset-0"
@@ -359,20 +510,22 @@ function TimePlanner({
               height: totalHeight,
             }}
           >
-            <div className="border-r bg-muted/5">
+            {/* Hour Labels Column */}
+            <div className="border-r border-border/50 bg-muted/5">
               {hours.map((hour: any) => (
                 <div
                   key={hour}
-                  className="relative border-b"
+                  className="relative border-b border-border/50"
                   style={{ height: plannerHourHeight }}
                 >
-                  <span className="-translate-y-1/2 absolute right-2 top-0 text-[10px] font-medium text-muted-foreground">
+                  <span className="-translate-y-1/2 absolute right-4 top-0 text-[10px] font-bold uppercase tracking-widest text-muted-foreground/40">
                     {formatHourLabel(hour)}
                   </span>
                 </div>
               ))}
             </div>
 
+            {/* Day Columns */}
             {days.map((day: any) => {
               const dayMeetings = getDayMeetings(meetings, day)
               const eventLayouts = getEventLayouts(dayMeetings)
@@ -380,32 +533,38 @@ function TimePlanner({
               return (
                 <div
                   key={day.toISOString()}
-                  className="relative border-r last:border-0"
+                  className="relative border-r border-border/50 last:border-r-0 hover:bg-muted/5 transition-colors"
                 >
                   {hours.map((hour: any) => (
                     <div
                       key={hour}
-                      className="border-b border-dashed h-[72px]"
+                      className="border-b border-border/50 border-dashed h-[80px]"
                     />
                   ))}
 
                   {eventLayouts.map((layout: any) => (
                     <div
                       key={layout.meeting.id}
-                      className="absolute rounded-md border-l-4 border-primary bg-primary/10 px-2 py-1.5 text-left shadow-sm overflow-hidden"
+                      onClick={() => onSelectMeeting(layout.meeting)}
+                      className="absolute rounded-xl border-l-4 border-primary bg-primary/10 px-3 py-2 text-left shadow-lg backdrop-blur-sm overflow-hidden group hover:scale-[1.02] transition-all cursor-pointer z-10"
                       style={{
                         top: layout.top,
                         left: `${layout.left}%`,
-                        width: `${layout.width}%`,
-                        height: layout.height,
+                        width: `${layout.width - 1}%`,
+                        height: layout.height - 4,
+                        margin: '2px'
                       }}
                     >
-                      <p className="truncate text-[11px] font-bold text-primary">
-                        {layout.meeting.clientName}
-                      </p>
-                      <p className="text-[9px] text-primary/80">
+                      <div className="flex items-center justify-between mb-1">
+                        <p className="truncate text-xs font-black text-primary uppercase tracking-tight">
+                          {layout.meeting.clientName}
+                        </p>
+                        <Users className="size-3 text-primary/40 opacity-0 group-hover:opacity-100 transition-opacity" />
+                      </div>
+                      <div className="flex items-center gap-1.5 text-[10px] font-bold text-primary/70">
+                        <Clock className="size-2.5" />
                         {formatTimeLabel(new Date(layout.meeting.startsAt))}
-                      </p>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -476,7 +635,7 @@ function getEventLayouts(meetings: Meeting[]) {
       column,
       totalColumns: 1,
       top,
-      height: Math.max(48, height),
+      height: Math.max(50, height),
     })
 
     currentGroupIndexes.push(layouts.length - 1)
@@ -503,5 +662,6 @@ function formatHourLabel(hour: number) {
   date.setHours(hour, 0, 0, 0)
   return new Intl.DateTimeFormat(undefined, {
     hour: "numeric",
+    hour12: true
   }).format(date)
 }

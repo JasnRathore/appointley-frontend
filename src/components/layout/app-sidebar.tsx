@@ -2,11 +2,14 @@ import * as React from "react"
 import { useQuery } from "@tanstack/react-query"
 import { 
   CalendarDays, 
-  LayoutDashboard, 
+  Home, 
   Link2, 
   Settings, 
   Users,
   GalleryVerticalEnd,
+  Calendar,
+  PieChart,
+  UserPlus,
 } from "lucide-react"
 
 import { NavMain } from "@/components/layout/nav-main"
@@ -37,11 +40,10 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       id: team.id,
       name: team.name,
       logo: GalleryVerticalEnd,
-      plan: "Standard", // Mock plan since not in backend yet
+      plan: "Standard", 
     }))
   }, [teamsQuery.data])
 
-  // Set initial active team if none selected or current is invalid
   React.useEffect(() => {
     if (teams.length > 0) {
       const currentTeamExists = teams.some((t) => t.id === activeTeamId)
@@ -53,9 +55,9 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
 
   const navigation = [
     {
-      title: "Dashboard",
+      title: "Home",
       url: "/dashboard",
-      icon: LayoutDashboard,
+      icon: Home,
       isActive: true,
     },
     {
@@ -77,6 +79,28 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       title: "Settings",
       url: "/settings",
       icon: Settings,
+      items: [
+        { title: "General", url: "/settings" },
+        { title: "Notifications", url: "/settings?tab=notifications" },
+      ]
+    },
+  ]
+
+  const projects = [
+    {
+      name: "Shared Calendar",
+      url: "/calendar",
+      icon: Calendar,
+    },
+    {
+      name: "Team Stats",
+      url: "/dashboard",
+      icon: PieChart,
+    },
+    {
+      name: "Invite Client",
+      url: "/meetings",
+      icon: UserPlus,
     },
   ]
 
