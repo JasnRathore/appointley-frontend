@@ -5,11 +5,15 @@ import {
   Shield, 
   UserMinus, 
   Users, 
-  UserCheck, 
+  UserCheck,
+  ArrowRight,
+  Copy,
+  ExternalLink,
   Crown, 
   MoreHorizontal,
-  ArrowRight
+  XCircle
 } from "lucide-react"
+import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -34,12 +38,15 @@ import {
   inviteTeamMember,
   removeTeamMember,
   updateTeamMemberRole,
+  revokeTeamInvite,
 } from "@/lib/api"
 import type { TeamRole } from "@/lib/types"
+import { useAuthStore } from "@/store/auth-store"
 
 const teamRoles: TeamRole[] = ["OWNER", "ADMIN", "MANAGER", "MEMBER", "VIEWER"]
 
 export function TeamPage() {
+  const { user, activeTeamId, setActiveTeamId } = useAuthStore()
   const queryClient = useQueryClient()
   const [inviteEmail, setInviteEmail] = useState("")
   const [inviteRole, setInviteRole] = useState<TeamRole>("MEMBER")
@@ -47,7 +54,7 @@ export function TeamPage() {
   const [newTeamName, setNewTeamName] = useState("")
   
   const teamQuery = useQuery({
-    queryKey: ["team-current"],
+    queryKey: ["team-current", activeTeamId],
     queryFn: getCurrentTeam,
     retry: false,
   })
@@ -92,11 +99,29 @@ export function TeamPage() {
 
   const createTeamMutation = useMutation({
     mutationFn: createTeam,
-    onSuccess: () => {
+    onSuccess: (data) => {
       setNewTeamName("")
-      void queryClient.invalidateQueries({ queryKey: ["team-current"] })
+      queryClient.setQueryData(["teams"], (old: any) => [...(old || []), data])
+      setActiveTeamId(data.id)
+      void queryClient.invalidateQueries()
+      toast.success(`Team "${data.name}" created!`)
     },
   })
+
+  const revokeInviteMutation = useMutation({
+    mutationFn: revokeTeamInvite,
+    onSuccess: () => {
+      void queryClient.invalidateQueries({ queryKey: ["team-current"] })
+      toast.success("Invitation canceled")
+    },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to cancel invitation")
+    },
+  })
+
+
+
+
 
   if (teamQuery.error && "status" in teamQuery.error && teamQuery.error.status === 404) {
     return (
@@ -137,6 +162,7 @@ export function TeamPage() {
   const teamData = teamQuery.data
   const members = teamData?.members ?? []
   const invites = teamData?.pendingInvites ?? []
+  const isOwner = teamData?.team.ownerId === user?.id
 
   return (
     <div className="flex flex-col gap-8 pb-8">
@@ -176,23 +202,29 @@ export function TeamPage() {
                       </div>
                     </div>
                     <div className="flex items-center space-x-3">
-                      <select
-                        className="h-8 rounded-lg border-none bg-muted/50 px-2 text-[10px] font-bold uppercase tracking-wider focus:ring-1 focus:ring-primary outline-none transition-all cursor-pointer"
-                        disabled={member.role === "OWNER" || roleMutation.isPending}
-                        value={member.role}
-                        onChange={(e) =>
-                          roleMutation.mutate({
-                            memberId: member.id,
-                            role: e.target.value as TeamRole,
-                          })
-                        }
-                      >
-                        {teamRoles.map((role) => (
-                          <option key={role} value={role}>
-                            {role}
-                          </option>
-                        ))}
-                      </select>
+                      {member.email === user?.email ? (
+                        <Badge variant="outline" className="h-8 px-3 text-[10px] font-bold uppercase tracking-wider border-none bg-muted/50">
+                          {member.role}
+                        </Badge>
+                      ) : (
+                        <select
+                          className="h-8 rounded-lg border-none bg-muted/50 px-2 text-[10px] font-bold uppercase tracking-wider focus:ring-1 focus:ring-primary outline-none transition-all cursor-pointer"
+                          disabled={member.role === "OWNER" || roleMutation.isPending}
+                          value={member.role}
+                          onChange={(e) =>
+                            roleMutation.mutate({
+                              memberId: member.id,
+                              role: e.target.value as TeamRole,
+                            })
+                          }
+                        >
+                          {teamRoles.map((role) => (
+                            <option key={role} value={role}>
+                              {role}
+                            </option>
+                          ))}
+                        </select>
+                      )}
                       <DropdownMenu>
                         <DropdownMenuTrigger asChild>
                            <Button size="icon" variant="ghost" className="size-8 opacity-0 group-hover:opacity-100 transition-opacity">
@@ -200,9 +232,17 @@ export function TeamPage() {
                            </Button>
                         </DropdownMenuTrigger>
                         <DropdownMenuContent align="end">
-                           <DropdownMenuItem className="text-destructive gap-2" disabled={member.role === "OWNER" || removeMutation.isPending} onClick={() => removeMutation.mutate(member.id)}>
+                           <DropdownMenuItem 
+                             className="text-destructive gap-2" 
+                             disabled={member.role === "OWNER" || removeMutation.isPending} 
+                             onClick={() => {
+                               if (confirm(member.email === user?.email ? "Are you sure you want to leave this team?" : "Are you sure you want to remove this member?")) {
+                                 removeMutation.mutate(member.id)
+                               }
+                             }}
+                           >
                               <UserMinus className="size-4" />
-                              Remove Member
+                              {member.email === user?.email ? "Leave Team" : "Remove Member"}
                            </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
@@ -234,7 +274,36 @@ export function TeamPage() {
                           </p>
                         </div>
                       </div>
-                      <Badge variant="outline" className="text-[10px] font-bold uppercase h-5">Pending</Badge>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="size-8 rounded-lg"
+                          title="Copy Link"
+                          onClick={() => {
+                            const link = `${window.location.origin}/invite/${invite.token}`
+                            void navigator.clipboard.writeText(link)
+                            toast.success("Invite link copied!")
+                          }}
+                        >
+                          <Copy className="size-4" />
+                        </Button>
+                        <Button
+                          size="icon"
+                          variant="ghost"
+                          className="size-8 rounded-lg text-destructive hover:text-destructive hover:bg-destructive/10"
+                          title="Cancel Invitation"
+                          onClick={() => {
+                            if (confirm("Are you sure you want to cancel this invitation?")) {
+                              revokeInviteMutation.mutate(invite.id)
+                            }
+                          }}
+                          disabled={revokeInviteMutation.isPending}
+                        >
+                          <XCircle className="size-4" />
+                        </Button>
+                        <Badge variant="outline" className="text-[10px] font-bold uppercase h-5">Pending</Badge>
+                      </div>
                     </div>
                   ))}
                 </div>
@@ -244,6 +313,7 @@ export function TeamPage() {
         </div>
 
         <div className="space-y-8">
+
           <Card className="border-none shadow-md bg-zinc-900 text-white">
             <CardHeader>
               <CardTitle className="text-lg">Invite New Member</CardTitle>
@@ -298,26 +368,15 @@ export function TeamPage() {
           <Card className="border-none shadow-sm border border-dashed bg-muted/5">
             <CardHeader>
               <CardTitle className="text-lg flex items-center gap-2">
-                 <UserCheck className="size-5 text-primary" />
-                 Accept Invite
+                 <ExternalLink className="size-5 text-primary" />
+                 Joining a team?
               </CardTitle>
-              <CardDescription>Join another team with a token.</CardDescription>
+              <CardDescription>Click the invitation link sent to your email to join another workspace.</CardDescription>
             </CardHeader>
-            <CardContent className="space-y-3">
-              <Input
-                placeholder="Enter invite token..."
-                value={acceptToken}
-                onChange={(e) => setAcceptToken(e.target.value)}
-                className="bg-background"
-              />
-              <Button
-                className="w-full"
-                variant="outline"
-                disabled={acceptMutation.isPending || !acceptToken}
-                onClick={() => acceptMutation.mutate(acceptToken)}
-              >
-                Join Team
-              </Button>
+            <CardContent>
+               <p className="text-xs text-muted-foreground leading-relaxed">
+                 Invitations are now link-based for better security and ease of use. If you have an old token, you can still enter it at <code>/invite/TOKEN</code>.
+               </p>
             </CardContent>
           </Card>
         </div>

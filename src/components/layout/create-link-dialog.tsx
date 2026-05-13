@@ -31,7 +31,7 @@ const formSchema = z.object({
   durationMinutes: z.number().min(1, "Duration must be at least 1 minute."),
   expirationDays: z.number().min(1, "Expiration must be at least 1 day."),
   recipientEmail: z.string().email("Invalid email").optional().or(z.literal("")),
-  oneTimeUse: z.boolean(),
+  maxUsages: z.number().min(1, "Must allow at least 1 booking.").optional(),
 })
 
 type FormValues = z.infer<typeof formSchema>
@@ -53,7 +53,7 @@ export function CreateLinkDialog({
       durationMinutes: 30,
       expirationDays: 10,
       recipientEmail: "",
-      oneTimeUse: false,
+      maxUsages: 1,
     },
   })
 
@@ -75,7 +75,7 @@ export function CreateLinkDialog({
       expirationDays: values.expirationDays,
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
       recipientEmail: values.recipientEmail || undefined,
-      oneTimeUse: values.oneTimeUse,
+      maxUsages: values.maxUsages,
     })
   }
 
@@ -83,9 +83,9 @@ export function CreateLinkDialog({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[425px]">
         <DialogHeader>
-          <DialogTitle>Create Targeted Link</DialogTitle>
+          <DialogTitle>Create Appointment Link</DialogTitle>
           <DialogDescription>
-            Generate a special link for a specific recipient or a one-time use session.
+            Generate a booking link for clients, with optional recipient targeting and one-time use controls.
           </DialogDescription>
         </DialogHeader>
         <Form {...form}>
@@ -160,28 +160,29 @@ export function CreateLinkDialog({
 
             <FormField
               control={form.control}
-              name="oneTimeUse"
+              name="maxUsages"
               render={({ field }) => (
-                <FormItem className="flex flex-row items-center justify-between rounded-lg border p-3 shadow-sm">
-                  <div className="space-y-0.5">
-                    <FormLabel>One-time use</FormLabel>
-                    <FormDescription className="text-[10px]">
-                      Deactivate link after the first booking.
-                    </FormDescription>
-                  </div>
+                <FormItem>
+                  <FormLabel>Max Bookings</FormLabel>
                   <FormControl>
-                    <Switch
-                      checked={field.value}
-                      onCheckedChange={field.onChange}
+                    <Input 
+                      type="number" 
+                      placeholder="1"
+                      {...field} 
+                      onChange={(e) => field.onChange(e.target.valueAsNumber || 0)} 
                     />
                   </FormControl>
+                  <FormDescription className="text-[10px]">
+                    Limit how many times this link can be used.
+                  </FormDescription>
+                  <FormMessage />
                 </FormItem>
               )}
             />
 
             <DialogFooter className="pt-2">
               <Button type="submit" className="w-full" disabled={mutation.isPending}>
-                {mutation.isPending ? "Generating..." : "Generate & Send Link"}
+                {mutation.isPending ? "Creating..." : "Create Appointment Link"}
               </Button>
             </DialogFooter>
           </form>

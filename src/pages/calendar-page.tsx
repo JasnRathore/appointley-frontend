@@ -1,8 +1,7 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { ChevronLeft, ChevronRight, Grid2x2, Timer, Settings2, ShieldAlert, Rows3, CalendarClock, Users, Clock, Calendar as CalendarIcon, XCircle, ExternalLink } from "lucide-react"
+import { ChevronLeft, ChevronRight, Grid2x2, Timer, Settings2, ShieldAlert, Rows3, Users, Clock, Calendar as CalendarIcon, XCircle, ExternalLink } from "lucide-react"
 import { useEffect, useMemo, useState } from "react"
 import { format, parseISO } from "date-fns"
-import * as React from "react"
 
 import { Button } from "@/components/ui/button"
 import { Calendar } from "@/components/ui/calendar"
@@ -17,7 +16,6 @@ import {
 import {
   describeRange,
   durationInMinutes,
-  formatToolbarLabel,
   formatWeekdayLabel,
   getDayMeetings,
   getHoursRange,
@@ -40,7 +38,6 @@ import {
   Dialog,
   DialogContent,
   DialogDescription,
-  DialogFooter,
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog"
@@ -49,7 +46,10 @@ const plannerStartHour = 6
 const plannerEndHour = 22
 const plannerHourHeight = 80 // Increased for better readability
 
+import { useAuthStore } from "@/store/auth-store"
+
 export function CalendarPage() {
+  const { activeTeamId } = useAuthStore()
   const queryClient = useQueryClient()
   const [view, setView] = useState<CalendarView>("week")
   const [selectedDate, setSelectedDate] = useState(() => new Date())
@@ -64,23 +64,23 @@ export function CalendarPage() {
   const cancelMutation = useMutation({
     mutationFn: cancelMeeting,
     onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["meetings"] })
-      void queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] })
+      void queryClient.invalidateQueries({ queryKey: ["meetings", activeTeamId] })
+      void queryClient.invalidateQueries({ queryKey: ["dashboard-summary", activeTeamId] })
       setShowDetails(false)
       setActiveMeeting(null)
     },
   })
 
   const rulesQuery = useQuery({
-    queryKey: ["availability-rules"],
+    queryKey: ["availability-rules", activeTeamId],
     queryFn: getAvailabilityRules,
   })
   const blockedDatesQuery = useQuery({
-    queryKey: ["blocked-dates"],
+    queryKey: ["blocked-dates", activeTeamId],
     queryFn: getBlockedDates,
   })
   const meetingsQuery = useQuery({
-    queryKey: ["meetings"],
+    queryKey: ["meetings", activeTeamId],
     queryFn: getMeetings,
   })
 
@@ -112,7 +112,6 @@ export function CalendarPage() {
     [view, selectedDate]
   )
   const selectedDayMeetings = getDayMeetings(scheduledMeetings, selectedDate)
-  const activeRules = rules.filter((rule) => rule.active)
   const hours = getHoursRange(plannerStartHour, plannerEndHour)
 
   return (

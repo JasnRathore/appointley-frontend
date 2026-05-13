@@ -9,6 +9,8 @@ import type {
   BlockedDate,
   BookingLink,
   DashboardSummary,
+  EmailTemplate,
+  EmailType,
   Meeting,
   Notification,
   OAuthStatusResponse,
@@ -19,6 +21,7 @@ import type {
   TeamMember,
   TeamSummary,
   TeamRole,
+  InviteDetails,
 } from "@/lib/types"
 
 const API_BASE_URL = import.meta.env.VITE_API_BASE_URL ?? "http://localhost:8080"
@@ -124,7 +127,7 @@ async function refreshSession() {
   }
 }
 
-export async function login(payload: { email: string; password: string }) {
+export async function login(payload: { email: string; password: string; inviteToken?: string }) {
   return request<AuthResponse>("/api/auth/login", {
     method: "POST",
     auth: false,
@@ -137,6 +140,7 @@ export async function register(payload: {
   teamName: string
   email: string
   password: string
+  inviteToken?: string
 }) {
   return request<AuthResponse>("/api/auth/register", {
     method: "POST",
@@ -187,6 +191,19 @@ export function createTeam(payload: { name: string }) {
   })
 }
 
+export function updateTeam(payload: { name: string }) {
+  return request<TeamDetails>("/api/teams/current", {
+    method: "PATCH",
+    body: payload,
+  })
+}
+
+export function deleteTeam() {
+  return request<void>("/api/teams/current", {
+    method: "DELETE",
+  })
+}
+
 export function inviteTeamMember(payload: { email: string; role: TeamRole }) {
   return request<TeamInvite>("/api/teams/current/invites", {
     method: "POST",
@@ -200,6 +217,12 @@ export function acceptTeamInvite(token: string) {
   })
 }
 
+export function getTeamInviteDetails(token: string) {
+  return request<InviteDetails>(`/api/teams/invites/${token}`, {
+    auth: false,
+  })
+}
+
 export function updateTeamMemberRole(memberId: string, payload: { role: TeamRole }) {
   return request<TeamMember>(`/api/teams/current/members/${memberId}/role`, {
     method: "PATCH",
@@ -209,6 +232,12 @@ export function updateTeamMemberRole(memberId: string, payload: { role: TeamRole
 
 export function removeTeamMember(memberId: string) {
   return request<void>(`/api/teams/current/members/${memberId}`, {
+    method: "DELETE",
+  })
+}
+
+export function revokeTeamInvite(inviteId: string) {
+  return request<void>(`/api/teams/current/invites/${inviteId}`, {
     method: "DELETE",
   })
 }
@@ -252,7 +281,7 @@ export function createBookingLink(payload: {
   durationMinutes?: number
   timezone: string
   recipientEmail?: string
-  oneTimeUse?: boolean
+  maxUsages?: number
 }) {
   return request<BookingLink>("/api/booking-links", {
     method: "POST",
@@ -300,6 +329,26 @@ export function updatePassword(payload: { currentPassword: string; newPassword: 
   return request<void>("/api/settings/password", {
     method: "PUT",
     body: payload,
+  })
+}
+
+export function getEmailTemplates() {
+  return request<EmailTemplate[]>("/api/settings/email-templates")
+}
+
+export function updateEmailTemplate(
+  type: EmailType,
+  payload: { subjectTemplate: string; bodyTemplate: string; active: boolean }
+) {
+  return request<EmailTemplate>(`/api/settings/email-templates/${type}`, {
+    method: "PUT",
+    body: payload,
+  })
+}
+
+export function resetEmailTemplate(type: EmailType) {
+  return request<void>(`/api/settings/email-templates/${type}`, {
+    method: "DELETE",
   })
 }
 

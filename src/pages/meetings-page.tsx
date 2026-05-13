@@ -1,42 +1,26 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { 
-  Calendar as CalendarIcon, 
-  XCircle, 
-  Search, 
-  Filter, 
-  MoreVertical,
-  CheckCircle2,
-  Clock,
-  ExternalLink
-} from "lucide-react"
+import { Search, Clock } from "lucide-react"
 import { useState } from "react"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-} from "@/components/ui/card"
 import { Input } from "@/components/ui/input"
-import { 
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
 import { cancelMeeting, getMeetings } from "@/lib/api"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { RescheduleDialog } from "@/components/layout/reschedule-dialog"
 import type { Meeting } from "@/lib/types"
 
+import { useAuthStore } from "@/store/auth-store"
+
 export function MeetingsPage() {
+  const { activeTeamId } = useAuthStore()
   const queryClient = useQueryClient()
   const [searchQuery, setSearchQuery] = useState("")
   const [rescheduleMeeting, setRescheduleMeeting] = useState<Meeting | null>(null)
   const [showReschedule, setShowReschedule] = useState(false)
   
   const meetingsQuery = useQuery({
-    queryKey: ["meetings"],
+    queryKey: ["meetings", activeTeamId],
     queryFn: getMeetings,
   })
 

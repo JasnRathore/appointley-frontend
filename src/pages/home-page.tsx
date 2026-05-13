@@ -1,8 +1,8 @@
 import { motion } from 'motion/react';
-import { Calendar, CheckCircle2, ChevronRight, Menu, Zap, Palette, Cpu, Users, BarChart3, Shield } from 'lucide-react';
+import { Calendar, ChevronRight, Menu, Zap, Palette, Cpu, Users, BarChart3, Shield } from 'lucide-react';
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
-import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useRef, useEffect, useState } from 'react';
 
 const testimonials = [
@@ -101,8 +101,8 @@ export default function Home() {
           </div>
 
           <div className="hidden lg:flex items-center gap-x-12">
-            {["Product", "Solutions", "Pricing", "Enterprise", "Resources"].map((link) => (
-              <a key={link} href="#" className="text-xs font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">
+            {["Product", "Pricing", "Docs"].map((link) => (
+              <a key={link} href={`/${link.toLowerCase()}`} className="text-xs font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">
                 {link}
               </a>
             ))}
@@ -343,9 +343,21 @@ export default function Home() {
             <div key={cat} className="space-y-10">
               <h4 className="font-black uppercase tracking-[0.3em] text-xs text-primary/60">{cat}</h4>
               <ul className="space-y-6 text-white/40 font-black uppercase tracking-widest text-[10px]">
-                <li><a href="#" className="hover:text-primary transition-colors">About Appointly</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">Contact Press</a></li>
-                <li><a href="#" className="hover:text-primary transition-colors">Privacy Center</a></li>
+                {cat === "Product" ? (
+                  <>
+                    <li><a href="/product" className="hover:text-primary transition-colors">Product</a></li>
+                    <li><a href="/pricing" className="hover:text-primary transition-colors">Pricing</a></li>
+                    <li><a href="/docs" className="hover:text-primary transition-colors">Docs</a></li>
+                  </>
+                ) : (
+                  <>
+                    <li><a href="#" className="hover:text-primary transition-colors">About Appointly</a></li>
+                    <li><a href="#" className="hover:text-primary transition-colors">Contact Press</a></li>
+                    <li><a href="#" className="hover:text-primary transition-colors">Privacy Center</a></li>
+                  </>
+                )}
+
+
               </ul>
             </div>
           ))}
@@ -381,3 +393,4 @@ function TestimonialCard({ name, role, company, quote, avatar }: any) {
     </Card>
   );
 }
+

@@ -34,6 +34,10 @@ interface DaySchedule {
   ranges: Array<{ startTime: string; endTime: string }>
 }
 
+function normalizeTimeValue(value: string) {
+  return value.length >= 5 ? value.slice(0, 5) : value
+}
+
 export function AvailabilityRulesDialog({
   open,
   onOpenChange,
@@ -53,8 +57,11 @@ export function AvailabilityRulesDialog({
       return {
         day,
         enabled: dayRules.length > 0,
-        ranges: dayRules.length > 0 
-          ? dayRules.map(r => ({ startTime: r.startTime, endTime: r.endTime }))
+        ranges: dayRules.length > 0
+          ? dayRules.map((r) => ({
+              startTime: normalizeTimeValue(r.startTime),
+              endTime: normalizeTimeValue(r.endTime),
+            }))
           : [{ startTime: "09:00", endTime: "17:00" }]
       }
     })
@@ -63,7 +70,8 @@ export function AvailabilityRulesDialog({
 
   const mutation = useMutation({
     mutationFn: replaceAvailabilityRules,
-    onSuccess: () => {
+    onSuccess: (updatedRules) => {
+      queryClient.setQueryData(["availability-rules"], updatedRules)
       void queryClient.invalidateQueries({ queryKey: ["availability-rules"] })
       onOpenChange(false)
     },
@@ -208,6 +216,11 @@ export function AvailabilityRulesDialog({
         </div>
 
         <DialogFooter className="p-8 pt-4 bg-muted/20 border-t">
+          {mutation.error && (
+            <div className="w-full rounded-2xl border border-destructive/20 bg-destructive/10 px-4 py-3 text-sm font-semibold text-destructive">
+              {(mutation.error as Error).message}
+            </div>
+          )}
           <Button variant="ghost" onClick={() => onOpenChange(false)} className="font-semibold">
             Cancel
           </Button>

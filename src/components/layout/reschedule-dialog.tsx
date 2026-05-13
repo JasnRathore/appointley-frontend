@@ -1,7 +1,7 @@
 import * as React from "react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { format, isSameDay, parseISO } from "date-fns"
-import { CalendarClock, CheckCircle2, ChevronRight, Clock, Globe, ArrowLeft } from "lucide-react"
+import { CalendarClock, CheckCircle2, Globe } from "lucide-react"
 
 import {
   Dialog,

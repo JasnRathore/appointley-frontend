@@ -1,22 +1,36 @@
-import { Bell, Check, Clock, Loader2 } from "lucide-react"
+import { Bell, Clock, Loader2 } from "lucide-react"
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { formatDistanceToNow } from "date-fns"
 import { useNavigate } from "react-router-dom"
-import * as React from "react"
 
 import {
   DropdownMenu,
   DropdownMenuContent,
-  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
 import { getNotifications, getUnreadCount, markNotificationAsRead, markAllNotificationsAsRead } from "@/lib/api"
+import type { Notification } from "@/lib/types"
 import { cn } from "@/lib/utils"
+
+const formatMessage = (msg: string) => {
+  // Try to find ISO date strings and format them
+  return msg.replace(/\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}Z/g, (match) => {
+    try {
+      return new Date(match).toLocaleString(undefined, { 
+        month: 'short', 
+        day: 'numeric', 
+        hour: 'numeric', 
+        minute: '2-digit' 
+      })
+    } catch {
+      return match
+    }
+  })
+}
 
 export function NotificationDropdown() {
   const queryClient = useQueryClient()
@@ -50,10 +64,8 @@ export function NotificationDropdown() {
     },
   })
 
-  const handleNotificationClick = (notification: any) => {
-    // Check both isRead (frontend type) and read (backend property name)
-    const isAlreadyRead = notification.isRead || notification.read
-    if (!isAlreadyRead) {
+  const handleNotificationClick = (notification: Notification) => {
+    if (!notification.isRead) {
       markReadMutation.mutate(notification.id)
     }
     if (notification.actionUrl) {
@@ -64,82 +76,86 @@ export function NotificationDropdown() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger asChild>
-        <Button variant="ghost" size="icon" className="relative">
+        <Button variant="ghost" size="icon" className="relative hover:bg-muted/50 rounded-full transition-all">
           <Bell className="size-5" />
           {unreadCount > 0 && (
-            <Badge className="absolute -top-1 -right-1 size-5 flex items-center justify-center p-0 bg-red-500 hover:bg-red-600 border-2 border-background animate-in zoom-in duration-300">
-              {unreadCount > 9 ? "9+" : unreadCount}
-            </Badge>
+            <span className="absolute top-2 right-2.5 size-2 rounded-full bg-primary ring-2 ring-background animate-pulse" />
           )}
         </Button>
       </DropdownMenuTrigger>
-      <DropdownMenuContent className="w-80 p-0 overflow-hidden" align="end">
-        <div className="flex items-center justify-between p-4 bg-muted/30">
-          <DropdownMenuLabel className="p-0 font-bold">Notifications</DropdownMenuLabel>
+      <DropdownMenuContent className="w-[340px] p-0 overflow-hidden shadow-2xl border-none ring-1 ring-border/50 rounded-2xl" align="end">
+        <div className="flex items-center justify-between px-4 py-3 bg-muted/20 backdrop-blur-sm">
+          <DropdownMenuLabel className="p-0 text-sm font-black tracking-tight">Notifications</DropdownMenuLabel>
           {unreadCount > 0 && (
-            <Button 
-              variant="ghost" 
-              size="sm" 
-              className="h-8 text-xs font-medium hover:text-primary transition-colors"
+            <button 
+              className="text-[10px] font-black uppercase tracking-widest text-primary hover:text-primary/80 transition-colors disabled:opacity-50"
               onClick={() => markAllReadMutation.mutate()}
               disabled={markAllReadMutation.isPending}
             >
-              {markAllReadMutation.isPending ? <Loader2 className="size-3 animate-spin" /> : "Mark all read"}
-            </Button>
+              {markAllReadMutation.isPending ? "Updating..." : "Mark all read"}
+            </button>
           )}
         </div>
-        <DropdownMenuSeparator className="m-0" />
-        <div className="h-[350px] overflow-y-auto">
+        <DropdownMenuSeparator className="m-0 bg-border/40" />
+        <div className="max-h-[420px] overflow-y-auto custom-scrollbar">
           {isLoadingNotifications ? (
-            <div className="flex items-center justify-center h-full">
-              <Loader2 className="size-6 animate-spin text-muted-foreground" />
+            <div className="flex items-center justify-center h-40">
+              <Loader2 className="size-5 animate-spin text-primary" />
             </div>
           ) : notifications.length === 0 ? (
-            <div className="flex flex-col items-center justify-center h-full py-12 px-8 text-center text-muted-foreground">
-               <div className="size-12 rounded-full bg-muted flex items-center justify-center mb-4">
-                  <Bell className="size-6 opacity-20" />
-               </div>
-               <p className="text-sm font-medium">All caught up!</p>
-               <p className="text-xs mt-1">No new notifications to show.</p>
+            <div className="flex flex-col items-center justify-center h-48 px-8 text-center">
+                <div className="size-12 rounded-full bg-muted/30 flex items-center justify-center mb-3">
+                  <Bell className="size-5 text-muted-foreground opacity-40" />
+                </div>
+                <p className="text-xs font-bold text-muted-foreground">All caught up!</p>
+                <p className="text-[10px] text-muted-foreground/60 mt-0.5">No new alerts to show.</p>
             </div>
           ) : (
-            <DropdownMenuGroup>
+            <div className="flex flex-col">
               {notifications.map((notification) => {
-                const isRead = notification.isRead || notification.read
+                const isRead = notification.isRead
                 return (
-                  <DropdownMenuItem
+                  <button
                     key={notification.id}
                     className={cn(
-                      "flex flex-col items-start gap-1 p-4 cursor-pointer focus:bg-muted/50 transition-colors border-b last:border-0",
-                      !isRead && "bg-primary/5"
+                      "flex flex-col items-start gap-1 p-4 text-left transition-all border-b border-border/30 last:border-0 relative",
+                      !isRead ? "bg-primary/[0.03] hover:bg-primary/[0.06]" : "hover:bg-muted/30"
                     )}
                     onClick={() => handleNotificationClick(notification)}
                   >
-                    <div className="flex w-full items-start justify-between gap-2">
-                      <p className={cn("text-sm leading-tight", !isRead ? "font-bold text-foreground" : "font-medium text-muted-foreground")}>
+                    {!isRead && (
+                      <div className="absolute top-5 right-4 size-1.5 rounded-full bg-primary" />
+                    )}
+                    <div className="flex w-full pr-4">
+                      <p className={cn(
+                        "text-xs leading-snug tracking-tight", 
+                        !isRead ? "font-black text-foreground" : "font-bold text-muted-foreground"
+                      )}>
                         {notification.title}
                       </p>
-                      {!isRead && (
-                        <div className="size-2 rounded-full bg-primary mt-1.5" />
-                      )}
                     </div>
-                    <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-                      {notification.message}
+                    <p className="text-[11px] text-muted-foreground/90 line-clamp-2 leading-relaxed mt-0.5">
+                      {formatMessage(notification.message)}
                     </p>
-                    <div className="flex items-center gap-2 mt-2 text-[10px] text-muted-foreground font-medium uppercase tracking-wider">
-                      <Clock className="size-3" />
-                      {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                    <div className="flex items-center gap-1.5 mt-2.5">
+                       <Clock className="size-3 text-muted-foreground/40" />
+                       <span className="text-[9px] font-black uppercase tracking-wider text-muted-foreground/60">
+                         {formatDistanceToNow(new Date(notification.createdAt), { addSuffix: true })}
+                       </span>
                     </div>
-                  </DropdownMenuItem>
+                  </button>
                 )
               })}
-            </DropdownMenuGroup>
+            </div>
           )}
         </div>
-        <DropdownMenuSeparator className="m-0" />
-        <Button variant="ghost" className="w-full rounded-none h-11 text-xs font-bold text-muted-foreground hover:text-primary" onClick={() => navigate("/notifications")}>
+        <DropdownMenuSeparator className="m-0 bg-border/40" />
+        <button 
+          className="w-full py-3 text-[10px] font-black uppercase tracking-widest text-muted-foreground hover:bg-muted/50 hover:text-primary transition-all" 
+          onClick={() => navigate("/notifications")}
+        >
            View All Activity
-        </Button>
+        </button>
       </DropdownMenuContent>
     </DropdownMenu>
   )

@@ -1,4 +1,5 @@
 import { create } from "zustand"
+import { toast } from "sonner"
 
 import type { AuthUser } from "@/lib/types"
 
@@ -90,15 +91,31 @@ export const useAuthStore = create<AuthState>((set) => ({
       hydrated: true,
     })
   },
-  setSession: (accessToken, refreshToken, user, oauthEnabled = false) => {
+  setSession: (
+    accessToken,
+    refreshToken,
+    user,
+    oauthEnabled = false,
+    activeTeamId = null,
+    joinedTeamId = null
+  ) => {
     const state = useAuthStore.getState()
-    const snapshot = { accessToken, refreshToken, user, activeTeamId: state.activeTeamId }
+    const snapshot = {
+      accessToken,
+      refreshToken,
+      user,
+      activeTeamId: activeTeamId || state.activeTeamId,
+    }
     persistAuth(snapshot)
     set({
       ...snapshot,
       oauthEnabled,
       hydrated: true,
     })
+    
+    if (joinedTeamId) {
+      toast.success("Welcome! You've joined the team successfully.")
+    }
   },
   setActiveTeamId: (activeTeamId) => {
     const state = useAuthStore.getState()

@@ -7,9 +7,8 @@ import {
   Settings, 
   Users,
   GalleryVerticalEnd,
-  Calendar,
-  PieChart,
-  UserPlus,
+  Mail,
+  Bell,
 } from "lucide-react"
 
 import { NavMain } from "@/components/layout/nav-main"
@@ -45,13 +44,13 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
   }, [teamsQuery.data])
 
   React.useEffect(() => {
-    if (teams.length > 0) {
+    if (teams.length > 0 && !teamsQuery.isFetching) {
       const currentTeamExists = teams.some((t) => t.id === activeTeamId)
       if (!activeTeamId || !currentTeamExists) {
         setActiveTeamId(teams[0].id)
       }
     }
-  }, [activeTeamId, teams, setActiveTeamId])
+  }, [activeTeamId, teams, setActiveTeamId, teamsQuery.isFetching])
 
   const navigation = [
     {
@@ -76,31 +75,19 @@ export function AppSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
       icon: Users,
     },
     {
-      title: "Settings",
+      title: "Emails",
+      url: "/emails",
+      icon: Mail,
+    },
+    {
+      title: "Notifications",
+      url: "/notifications",
+      icon: Bell,
+    },
+    {
+      title: "Workspace Settings",
       url: "/settings",
       icon: Settings,
-      items: [
-        { title: "General", url: "/settings" },
-        { title: "Notifications", url: "/settings?tab=notifications" },
-      ]
-    },
-  ]
-
-  const projects = [
-    {
-      name: "Shared Calendar",
-      url: "/calendar",
-      icon: Calendar,
-    },
-    {
-      name: "Team Stats",
-      url: "/dashboard",
-      icon: PieChart,
-    },
-    {
-      name: "Invite Client",
-      url: "/meetings",
-      icon: UserPlus,
     },
   ]
 

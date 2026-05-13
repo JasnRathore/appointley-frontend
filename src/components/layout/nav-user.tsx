@@ -82,11 +82,11 @@ export function NavUser({
               </div>
             </DropdownMenuLabel>
             <DropdownMenuGroup>
-              <DropdownMenuItem onClick={() => navigate("/settings")}>
+              <DropdownMenuItem onClick={() => navigate("/account")}>
                 <BadgeCheckIcon className="mr-2 size-4" />
                 Account
               </DropdownMenuItem>
-              <DropdownMenuItem onClick={() => navigate("/settings?tab=notifications")}>
+              <DropdownMenuItem onClick={() => navigate("/account?tab=notifications")}>
                 <BellIcon className="mr-2 size-4" />
                 Notifications
               </DropdownMenuItem>

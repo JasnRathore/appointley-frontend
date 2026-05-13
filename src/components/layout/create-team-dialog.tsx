@@ -48,7 +48,8 @@ export function CreateTeamDialog({
   const mutation = useMutation({
     mutationFn: createTeam,
     onSuccess: (data) => {
-      void queryClient.invalidateQueries({ queryKey: ["teams"] })
+      queryClient.setQueryData(["teams"], (old: any) => [...(old || []), data])
+      void queryClient.invalidateQueries()
       setActiveTeamId(data.id)
       onOpenChange(false)
       form.reset()

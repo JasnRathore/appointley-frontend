@@ -19,7 +19,6 @@ import { Alert, AlertDescription } from "@/components/ui/alert"
 
 const signupSchema = z.object({
   fullName: z.string().min(2, "Full name must be at least 2 characters"),
-  teamName: z.string().min(2, "Team name must be at least 2 characters"),
   email: z.string().email("Invalid email address"),
   password: z.string().min(8, "Password must be at least 8 characters"),
   confirmPassword: z.string()
@@ -30,6 +29,8 @@ const signupSchema = z.object({
 
 type SignupFormValues = z.infer<typeof signupSchema>
 
+import { useSearchParams } from "react-router-dom"
+
 export function SignupForm({
   className,
   ...props
@@ -39,13 +40,27 @@ export function SignupForm({
   const [error, setError] = React.useState<string | null>(null)
   const [isLoading, setIsLoading] = React.useState(false)
 
+  const [searchParams] = useSearchParams()
+  const inviteToken = searchParams.get("token")
+  const inviteEmail = searchParams.get("email")
+
   const {
     register,
     handleSubmit,
+    setValue,
     formState: { errors },
   } = useForm<SignupFormValues>({
     resolver: zodResolver(signupSchema),
+    defaultValues: {
+      email: inviteEmail || "",
+    }
   })
+
+  React.useEffect(() => {
+    if (inviteEmail) {
+      setValue("email", inviteEmail)
+    }
+  }, [inviteEmail, setValue])
 
   const onSubmit = async (values: SignupFormValues) => {
     setIsLoading(true)
@@ -53,17 +68,25 @@ export function SignupForm({
     try {
       const response = await registerApi({
         fullName: values.fullName,
-        teamName: values.teamName,
+        teamName: "", // Backend will handle default name
         email: values.email,
-        password: values.password
+        password: values.password,
+        inviteToken: inviteToken || undefined
       })
       setSession(
         response.accessToken,
         response.refreshToken,
         response.user,
-        response.oauthEnabled
+        response.oauthEnabled,
+        response.activeTeamId,
+        response.joinedTeamId
       )
-      navigate("/dashboard")
+      // If registering via invite, redirect to invite page to show confirmation
+      if (inviteToken) {
+        navigate(`/invite/${inviteToken}`)
+      } else {
+        navigate("/dashboard")
+      }
     } catch (err: any) {
       setError(err.message || "Something went wrong. Please try again.")
     } finally {
@@ -91,33 +114,20 @@ export function SignupForm({
               </Alert>
             )}
 
-            <div className="grid gap-4">
-              <div className="grid grid-cols-2 gap-4">
-                <Field>
-                  <FieldLabel htmlFor="fullName">Full Name</FieldLabel>
-                  <Input
-                    id="fullName"
-                    placeholder="John Doe"
-                    {...register("fullName")}
-                    disabled={isLoading}
-                  />
-                  {errors.fullName && (
-                    <p className="text-xs text-destructive mt-1">{errors.fullName.message}</p>
-                  )}
-                </Field>
-                <Field>
-                  <FieldLabel htmlFor="teamName">Team Name</FieldLabel>
-                  <Input
-                    id="teamName"
-                    placeholder="Acme Corp"
-                    {...register("teamName")}
-                    disabled={isLoading}
-                  />
-                  {errors.teamName && (
-                    <p className="text-xs text-destructive mt-1">{errors.teamName.message}</p>
-                  )}
-                </Field>
-              </div>
+            <div className="grid grid-cols-1 gap-4">
+              <Field>
+                <FieldLabel htmlFor="fullName">Full Name</FieldLabel>
+                <Input
+                  id="fullName"
+                  placeholder="John Doe"
+                  {...register("fullName")}
+                  disabled={isLoading}
+                />
+                {errors.fullName && (
+                  <p className="text-xs text-destructive mt-1">{errors.fullName.message}</p>
+                )}
+              </Field>
+            </div>
 
               <Field>
                 <FieldLabel htmlFor="email">Email</FieldLabel>
@@ -169,7 +179,6 @@ export function SignupForm({
                   "Create Account"
                 )}
               </Button>
-            </div>
 
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
@@ -203,7 +212,7 @@ export function SignupForm({
             
             <p className="text-center text-sm text-muted-foreground">
               Already have an account?{" "}
-              <Link to="/login" className="text-primary font-medium hover:underline underline-offset-4">
+              <Link to={inviteToken ? `/login?token=${inviteToken}&email=${inviteEmail || ""}` : "/login"} className="text-primary font-medium hover:underline underline-offset-4">
                 Login
               </Link>
             </p>

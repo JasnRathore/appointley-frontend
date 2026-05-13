@@ -1,6 +1,19 @@
 export type AuthProvider = "LOCAL" | "GOOGLE"
 export type TeamRole = "OWNER" | "ADMIN" | "MANAGER" | "MEMBER" | "VIEWER"
 export type MeetingStatus = "SCHEDULED" | "CANCELLED"
+export type EmailType =
+  | "WELCOME"
+  | "TEAM_INVITE"
+  | "MEETING_BOOKED_ORGANIZER"
+  | "MEETING_BOOKED_CLIENT"
+  | "MEETING_CANCELLED_ORGANIZER"
+  | "MEETING_CANCELLED_CLIENT"
+  | "MEETING_RESCHEDULED_ORGANIZER"
+  | "MEETING_RESCHEDULED_CLIENT"
+  | "REMINDER"
+  | "BOOKING_LINK"
+  | "PASSWORD_RESET"
+  | "ROLE_UPDATED"
 export type DayOfWeek =
   | "MONDAY"
   | "TUESDAY"
@@ -23,6 +36,8 @@ export type AuthResponse = {
   refreshToken: string
   user: AuthUser
   oauthEnabled: boolean
+  activeTeamId: string | null
+  joinedTeamId: string | null
 }
 
 export type OAuthStatusResponse = {
@@ -111,7 +126,8 @@ export type BookingLink = {
   timezone: string
   bookingUrl: string
   recipientEmail: string | null
-  oneTimeUse: boolean
+  maxUsages: number | null
+  currentUsages: number
 }
 
 export type PublicSlot = {
@@ -140,6 +156,7 @@ export type Meeting = {
   status: MeetingStatus
   timezone: string
   notes: string | null
+  manageable: boolean
 }
 
 export type Settings = {
@@ -152,6 +169,30 @@ export type Settings = {
   inAppOnBooking: boolean
   weeklyDigest: boolean
   marketingEmails: boolean
+}
+
+export type EmailTemplate = {
+  type: EmailType
+  displayName: string
+  description: string
+  subjectTemplate: string
+  bodyTemplate: string
+  defaultSubjectTemplate: string
+  defaultBodyTemplate: string
+  active: boolean
+  customized: boolean
+  variables: string[]
+}
+
+export interface InviteDetails {
+  teamName: string
+  inviterName: string
+  role: TeamRole
+  email: string
+  isExistingUser: boolean
+  isExpired: boolean
+  isAccepted: boolean
+  isRevoked: boolean
 }
 
 export type Notification = {

@@ -1,9 +1,10 @@
 import { useQuery } from "@tanstack/react-query"
 import { Outlet, useLocation, Link } from "react-router-dom"
 import * as React from "react"
-import { Bell, PlusCircle } from "lucide-react"
+import { PlusCircle } from "lucide-react"
 
 import { AppSidebar } from "@/components/layout/app-sidebar"
+import { CreateLinkDialog } from "@/components/layout/create-link-dialog"
 import { NotificationDropdown } from "@/components/layout/notification-dropdown"
 import {
   Breadcrumb,
@@ -28,6 +29,7 @@ export function AppShell() {
   const location = useLocation()
   const pathSegments = location.pathname.split("/").filter(Boolean)
   const activeTeamId = useAuthStore((state) => state.activeTeamId)
+  const [showCreateLink, setShowCreateLink] = React.useState(false)
 
   const teamsQuery = useQuery({
     queryKey: ["teams"],
@@ -88,15 +90,20 @@ export function AppShell() {
             
             <div className="ml-auto flex items-center gap-3">
               <NotificationDropdown />
-              <Button size="sm" className="hidden sm:flex gap-2 rounded-full shadow-lg shadow-primary/10">
+              <Button
+                size="sm"
+                className="hidden sm:flex gap-2 rounded-full shadow-lg shadow-primary/10"
+                onClick={() => setShowCreateLink(true)}
+              >
                  <PlusCircle className="size-4" />
-                 <span className="font-bold">Create</span>
+                 <span className="font-bold">Create Link</span>
               </Button>
             </div>
           </header>
           <main className="flex-1 p-6 md:p-8 lg:p-10 max-w-[1600px] mx-auto w-full">
             <Outlet />
           </main>
+          <CreateLinkDialog open={showCreateLink} onOpenChange={setShowCreateLink} />
         </SidebarInset>
       </SidebarProvider>
     </TooltipProvider>

@@ -1,21 +1,16 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { useEffect, useState } from "react"
-import { 
-  Save, 
-  ShieldCheck, 
-  Bell, 
-  User, 
-  Lock,
-  LogOut,
-  Mail,
-  Smartphone,
-  XCircle,
+import {
   AlertCircle,
-  Calendar,
-  Zap
+  Save,
+  Zap,
+  Settings2,
+  Trash2,
+  Check,
+  X,
 } from "lucide-react"
-
-import { Switch } from "@/components/ui/switch"
+import { useNavigate } from "react-router-dom"
+import { toast } from "sonner"
 
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -26,12 +21,6 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { getSettings, updateSettings, logout, updatePassword, logoutEverywhere, deleteAccount } from "@/lib/api"
-import { useAuthStore } from "@/store/auth-store"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { useNavigate } from "react-router-dom"
 import {
   Dialog,
   DialogContent,
@@ -41,6 +30,21 @@ import {
   DialogTitle,
   DialogTrigger,
 } from "@/components/ui/dialog"
+import { Input } from "@/components/ui/input"
+import { Label } from "@/components/ui/label"
+import { Switch } from "@/components/ui/switch"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Textarea } from "@/components/ui/textarea"
+import {
+  getSettings,
+  updateSettings,
+  getCurrentTeam,
+  updateTeam,
+  deleteTeam,
+} from "@/lib/api"
+import type { EmailTemplate, EmailType } from "@/lib/types"
+import { useAuthStore } from "@/store/auth-store"
+
 
 export function SettingsPage() {
   const queryClient = useQueryClient()
@@ -48,12 +52,19 @@ export function SettingsPage() {
   const user = useAuthStore((state) => state.user)
   const accessToken = useAuthStore((state) => state.accessToken)
   const refreshToken = useAuthStore((state) => state.refreshToken)
+  const activeTeamId = useAuthStore((state) => state.activeTeamId)
   const setSession = useAuthStore((state) => state.setSession)
-  
+
   const settingsQuery = useQuery({
-    queryKey: ["settings"],
+    queryKey: ["settings", activeTeamId],
     queryFn: getSettings,
   })
+
+  const teamQuery = useQuery({
+    queryKey: ["current-team", activeTeamId],
+    queryFn: getCurrentTeam,
+  })
+
 
   const [fullName, setFullName] = useState("")
   const [teamName, setTeamName] = useState("")
@@ -62,49 +73,48 @@ export function SettingsPage() {
   const [inAppOnBooking, setInAppOnBooking] = useState(true)
   const [weeklyDigest, setWeeklyDigest] = useState(false)
   const [marketingEmails, setMarketingEmails] = useState(false)
-  const [showDeleteAccount, setShowDeleteAccount] = useState(false)
-  const [deleteConfirmText, setDeleteConfirmText] = useState("")
+  const [isEditingName, setIsEditingName] = useState(false)
+  const [newWorkspaceName, setNewWorkspaceName] = useState("")
 
-  const [showPasswordDialog, setShowPasswordDialog] = useState(false)
-  const [currentPassword, setCurrentPassword] = useState("")
-  const [newPassword, setNewPassword] = useState("")
-  const [confirmPassword, setConfirmPassword] = useState("")
-  
-  const passwordMutation = useMutation({
-    mutationFn: updatePassword,
+  const updateTeamMutation = useMutation({
+    mutationFn: updateTeam,
     onSuccess: () => {
-      setShowPasswordDialog(false)
-      setCurrentPassword("")
-      setNewPassword("")
-      setConfirmPassword("")
-      // maybe show a toast in a real app
+      void queryClient.invalidateQueries({ queryKey: ["current-team"] })
+      void queryClient.invalidateQueries({ queryKey: ["teams"] })
+      toast.success("Workspace renamed successfully")
+      setIsEditingName(false)
     },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to rename workspace")
+    }
   })
 
-  const logoutEverywhereMutation = useMutation({
-    mutationFn: logoutEverywhere,
-    onSuccess: () => navigate("/login"),
-  })
-
-  const deleteAccountMutation = useMutation({
-    mutationFn: deleteAccount,
+  const deleteTeamMutation = useMutation({
+    mutationFn: deleteTeam,
     onSuccess: () => {
-      useAuthStore.getState().clearSession()
-      navigate("/login")
+      void queryClient.invalidateQueries({ queryKey: ["teams"] })
+      toast.success("Workspace deleted")
+      // Auth store or sidebar will handle the redirect since activeTeamId is cleared
     },
+    onError: (error: any) => {
+      toast.error(error.message || "Failed to delete workspace")
+    }
   })
 
   useEffect(() => {
-    if (settingsQuery.data) {
-      setFullName(settingsQuery.data.fullName)
-      setTeamName(settingsQuery.data.teamName)
-      setSenderName(settingsQuery.data.senderName)
-      setEmailOnBooking(settingsQuery.data.emailOnBooking)
-      setInAppOnBooking(settingsQuery.data.inAppOnBooking)
-      setWeeklyDigest(settingsQuery.data.weeklyDigest)
-      setMarketingEmails(settingsQuery.data.marketingEmails)
+    if (!settingsQuery.data) {
+      return
     }
+
+    setFullName(settingsQuery.data.fullName)
+    setTeamName(settingsQuery.data.teamName)
+    setSenderName(settingsQuery.data.senderName)
+    setEmailOnBooking(settingsQuery.data.emailOnBooking)
+    setInAppOnBooking(settingsQuery.data.inAppOnBooking)
+    setWeeklyDigest(settingsQuery.data.weeklyDigest)
+    setMarketingEmails(settingsQuery.data.marketingEmails)
   }, [settingsQuery.data])
+
 
   const updateMutation = useMutation({
     mutationFn: updateSettings,
@@ -126,369 +136,140 @@ export function SettingsPage() {
   })
 
 
+  const templateError = null
+
+  const saveGeneralSettings = () =>
+    updateMutation.mutate({
+      fullName,
+      teamName,
+      senderName,
+      emailOnBooking,
+      inAppOnBooking,
+      weeklyDigest,
+      marketingEmails,
+    })
+
+  const teamData = teamQuery.data
+  const members = teamData?.members ?? []
+  const isOwner = teamData?.team.ownerId === user?.id
 
   return (
     <div className="flex flex-col gap-8 pb-8">
-
-      <Tabs defaultValue="general" className="w-full">
-        <TabsList className="grid w-full max-w-[600px] grid-cols-4 mb-8">
-          <TabsTrigger value="general" className="gap-2">
-             <User className="size-4" />
-             <span className="hidden sm:inline">General</span>
-          </TabsTrigger>
-          <TabsTrigger value="branding" className="gap-2">
-             <Zap className="size-4" />
-             <span className="hidden sm:inline">Branding</span>
-          </TabsTrigger>
-          <TabsTrigger value="notifications" className="gap-2">
-             <Bell className="size-4" />
-             <span className="hidden sm:inline">Alerts</span>
-          </TabsTrigger>
-          <TabsTrigger value="security" className="gap-2">
-             <Lock className="size-4" />
-             <span className="hidden sm:inline">Security</span>
-          </TabsTrigger>
-        </TabsList>
-
-        <TabsContent value="general" className="space-y-6">
-          <Card className="max-w-3xl border-none shadow-sm">
-            <CardHeader>
-              <CardTitle>Profile Information</CardTitle>
-              <CardDescription>
-                This information will be displayed on your booking pages.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid gap-6 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="full-name">Full Name</Label>
-                  <Input
-                    id="full-name"
-                    value={fullName}
-                    onChange={(e) => setFullName(e.target.value)}
-                    className="h-11"
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email-static">Email Address</Label>
-                  <Input
-                    id="email-static"
-                    value={user?.email ?? ""}
-                    disabled
-                    className="h-11 bg-muted/50 opacity-70"
-                  />
-                </div>
+      <div className="flex flex-col gap-8 max-w-3xl">
+        <Card className="border-none shadow-sm overflow-hidden ring-1 ring-border/50">
+          <CardHeader className="bg-muted/30 pb-6 border-b border-border/50">
+            <div className="flex items-center gap-3">
+              <div className="flex size-10 items-center justify-center rounded-xl bg-primary/10 text-primary">
+                <Settings2 className="size-5" />
               </div>
-
-
-              <div className="flex items-center justify-between border-t pt-6">
-                <div className="flex items-center gap-3">
-                  <div className="size-10 rounded-full bg-primary/10 flex items-center justify-center">
-                     <ShieldCheck className="size-5 text-primary" />
-                  </div>
-                  <div>
-                    <p className="text-sm font-bold">Google Integration</p>
-                    <Badge variant={settingsQuery.data?.oauthEnabled ? "secondary" : "outline"} className="mt-1 border-none bg-green-500/10 text-green-600">
-                      {settingsQuery.data?.oauthEnabled ? "Verified & Active" : "Pending Connection"}
-                    </Badge>
-                  </div>
-                </div>
-                <Button
-                  className="shadow-lg shadow-primary/20"
-                  disabled={updateMutation.isPending}
-                  onClick={() =>
-                    updateMutation.mutate({
-                      fullName,
-                      teamName,
-                      senderName,
-                      emailOnBooking,
-                      inAppOnBooking,
-                      weeklyDigest,
-                      marketingEmails,
-                    })
-                  }
-                >
-                  <Save className="mr-2 size-4" />
-                  {updateMutation.isPending ? "Saving..." : "Save Changes"}
-                </Button>
-              </div>
-            </CardContent>
-          </Card>
-
-          <Card className="max-w-3xl border-none shadow-md border-2 border-red-500/50 bg-red-50/50 dark:bg-red-900/10">
-             <CardHeader className="border-b border-red-500/20 pb-4">
-                <CardTitle className="text-red-700 dark:text-red-400 font-black flex items-center gap-2 text-xl">
-                  <AlertCircle className="size-5 text-red-600" />
-                  Danger Zone
-                </CardTitle>
-                <CardDescription className="text-red-700/80 dark:text-red-400/80 font-medium">
-                  Irreversible actions. Please proceed with extreme caution.
+              <div>
+                <CardTitle className="text-xl">Workspace Identity</CardTitle>
+                <CardDescription>
+                  Manage your organization's name and how it appears in communications.
                 </CardDescription>
-             </CardHeader>
-             <CardContent className="flex flex-col sm:flex-row gap-4 pt-6">
-                <Button 
-                  variant="destructive" 
-                  className="h-11 px-6 shadow-lg shadow-red-500/20 font-bold" 
-                  onClick={() => logoutEverywhereMutation.mutate()}
-                  disabled={logoutEverywhereMutation.isPending}
-                >
-                   <LogOut className="mr-2 size-4" />
-                   {logoutEverywhereMutation.isPending ? "Signing out..." : "Sign Out Everywhere"}
-                </Button>
-                <Dialog open={showDeleteAccount} onOpenChange={setShowDeleteAccount}>
-                  <DialogTrigger asChild>
-                    <Button variant="outline" className="h-11 px-6 border-red-500/50 text-red-700 dark:text-red-400 hover:bg-red-500 hover:text-white transition-all font-bold">
-                       Delete Account
-                    </Button>
-                  </DialogTrigger>
-                  <DialogContent className="max-w-md">
-                    <DialogHeader>
-                      <DialogTitle className="text-red-600">Delete Account</DialogTitle>
-                      <DialogDescription>
-                        This action is irreversible. All your booking links, meetings, and data will be permanently deleted.
-                      </DialogDescription>
-                    </DialogHeader>
-                    <div className="space-y-4 py-4">
-                      <div className="space-y-2">
-                        <Label htmlFor="confirm-delete">To confirm, type <span className="font-bold text-foreground">delete</span> below:</Label>
-                        <Input
-                          id="confirm-delete"
-                          value={deleteConfirmText}
-                          onChange={(e) => setDeleteConfirmText(e.target.value)}
-                          placeholder="type delete here..."
-                          className="border-red-500/20 focus:border-red-500 h-11"
-                        />
-                      </div>
-                    </div>
-                    <DialogFooter>
-                      <Button variant="ghost" onClick={() => setShowDeleteAccount(false)}>Cancel</Button>
-                      <Button 
-                        variant="destructive" 
-                        disabled={deleteConfirmText.toLowerCase() !== "delete" || deleteAccountMutation.isPending}
-                        onClick={() => deleteAccountMutation.mutate()}
-                      >
-                        {deleteAccountMutation.isPending ? "Deleting..." : "Permanently Delete Account"}
-                      </Button>
-                    </DialogFooter>
-                  </DialogContent>
-                </Dialog>
-             </CardContent>
-          </Card>
-        </TabsContent>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent className="space-y-8 pt-8">
+            <div className="grid gap-8 sm:grid-cols-2">
+              <div className="space-y-3">
+                <Label htmlFor="team-name" className="text-xs font-black uppercase tracking-widest text-muted-foreground/70">
+                  Organization Name
+                </Label>
+                <Input
+                  id="team-name"
+                  value={teamName}
+                  onChange={(e) => setTeamName(e.target.value)}
+                  placeholder="e.g. Acme Corp"
+                  className="h-12 bg-muted/20 border-border/50 focus:bg-background transition-all font-medium"
+                />
+                <p className="text-[11px] text-muted-foreground px-1">
+                  This name is used internally and displayed to your team.
+                </p>
+              </div>
+              <div className="space-y-3">
+                <Label htmlFor="sender-name" className="text-xs font-black uppercase tracking-widest text-muted-foreground/70">
+                  Email Sender Name
+                </Label>
+                <Input
+                  id="sender-name"
+                  value={senderName}
+                  onChange={(e) => setSenderName(e.target.value)}
+                  placeholder="e.g. Jasn from Appointley"
+                  className="h-12 bg-muted/20 border-border/50 focus:bg-background transition-all font-medium"
+                />
+                <p className="text-[11px] text-muted-foreground px-1">
+                  How your name appears in automated emails to clients.
+                </p>
+              </div>
+            </div>
 
-        <TabsContent value="branding" className="space-y-6">
-          <Card className="max-w-3xl border-none shadow-sm">
-            <CardHeader>
-              <CardTitle>Workspace Branding</CardTitle>
-              <CardDescription>
-                Customize how your organization appears to your clients.
-              </CardDescription>
-            </CardHeader>
-            <CardContent className="space-y-6">
-              <div className="grid gap-6 sm:grid-cols-2">
-                <div className="space-y-2">
-                  <Label htmlFor="team-name">Organization Name</Label>
-                  <Input
-                    id="team-name"
-                    value={teamName}
-                    onChange={(e) => setTeamName(e.target.value)}
-                    className="h-11"
-                  />
+            <div className="flex items-center justify-between border-t border-border/50 pt-6">
+              <div className="flex items-center gap-2 text-xs text-muted-foreground italic">
+                <Zap className="size-3 text-amber-500" />
+                Changes apply instantly to all new bookings.
+              </div>
+              <Button
+                className="h-11 px-8 shadow-lg shadow-primary/20 font-bold"
+                disabled={updateMutation.isPending}
+                onClick={saveGeneralSettings}
+              >
+                {updateMutation.isPending ? (
+                  <span className="flex items-center gap-2">
+                    <span className="size-4 animate-spin rounded-full border-2 border-background border-t-transparent" />
+                    Saving...
+                  </span>
+                ) : (
+                  <span className="flex items-center gap-2">
+                    <Save className="size-4" />
+                    Save Workspace
+                  </span>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+
+        {isOwner && (
+          <Card className="border-none shadow-sm ring-2 ring-red-500/30 overflow-hidden bg-red-500/[0.02]">
+            <CardHeader className="bg-red-500/10 pb-4 border-b border-red-500/20">
+              <div className="flex items-center gap-3">
+                <div className="flex size-10 items-center justify-center rounded-xl bg-red-500/20 text-red-400">
+                  <AlertCircle className="size-5" />
                 </div>
-                <div className="space-y-2">
-                  <Label htmlFor="sender-name">Email Sender Display Name</Label>
-                  <Input
-                    id="sender-name"
-                    value={senderName}
-                    onChange={(e) => setSenderName(e.target.value)}
-                    placeholder="e.g. Jasn from Appointley"
-                    className="h-11"
-                  />
+                <div>
+                  <CardTitle className="text-lg font-black text-red-500 uppercase tracking-tight">Danger Zone</CardTitle>
+                  <CardDescription className="text-red-400/80 font-medium">
+                    Irreversible actions related to this workspace.
+                  </CardDescription>
                 </div>
               </div>
-
-              <div className="flex justify-end pt-4">
-                <Button
-                  className="shadow-lg shadow-primary/20"
-                  disabled={updateMutation.isPending}
-                  onClick={() =>
-                    updateMutation.mutate({
-                      fullName,
-                      teamName,
-                      senderName,
-                      emailOnBooking,
-                      inAppOnBooking,
-                      weeklyDigest,
-                      marketingEmails,
-                    })
-                  }
+            </CardHeader>
+            <CardContent className="pt-6">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 p-5 rounded-2xl border-2 border-red-500/10 bg-red-500/[0.03]">
+                <div className="space-y-1">
+                  <p className="text-base font-black text-red-500">Delete this workspace</p>
+                  <p className="text-xs text-muted-foreground font-medium max-w-[300px]">
+                    Once deleted, all data, meetings, and team associations will be <span className="text-red-500 font-bold underline">permanently removed</span>.
+                  </p>
+                </div>
+                <Button 
+                  className="h-12 px-8 font-black shadow-xl shadow-red-600/30 group uppercase tracking-wider bg-red-600 hover:bg-red-700 text-white border-none transition-all active:scale-95"
+                  onClick={() => {
+                    if (confirm(`Type "DELETE" to confirm you want to delete "${teamData?.team.name}". This cannot be undone.`)) {
+                      deleteTeamMutation.mutate()
+                    }
+                  }}
+                  disabled={deleteTeamMutation.isPending}
                 >
-                  <Save className="mr-2 size-4" />
-                  {updateMutation.isPending ? "Saving..." : "Save Branding"}
+                  <Trash2 className="size-5 mr-2 group-hover:scale-110 transition-transform" />
+                  {deleteTeamMutation.isPending ? "Deleting..." : "Delete Workspace"}
                 </Button>
               </div>
             </CardContent>
           </Card>
-        </TabsContent>
-
-        <TabsContent value="notifications" className="space-y-6">
-           <Card className="max-w-3xl border-none shadow-sm">
-              <CardHeader>
-                 <CardTitle>Email Notifications</CardTitle>
-                 <CardDescription>Control how you receive updates about your meetings.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                 {[
-                   { 
-                     id: "emailOnBooking",
-                     title: "Email Notifications", 
-                     icon: Mail, 
-                     desc: "Get emails for new bookings and schedule changes.",
-                     checked: emailOnBooking,
-                     onCheckedChange: setEmailOnBooking
-                   },
-                   { 
-                     id: "inAppOnBooking",
-                     title: "In-App Alerts", 
-                     icon: Zap, 
-                     desc: "Real-time notifications within the dashboard.",
-                     checked: inAppOnBooking,
-                     onCheckedChange: setInAppOnBooking
-                   },
-                   { 
-                     id: "weeklyDigest",
-                     title: "Weekly Digest", 
-                     icon: Calendar, 
-                     desc: "A summary of your performance and upcoming week.",
-                     checked: weeklyDigest,
-                     onCheckedChange: setWeeklyDigest
-                   },
-                   { 
-                     id: "marketingEmails",
-                     title: "Product Updates", 
-                     icon: Smartphone, 
-                     desc: "News about new features and improvements.",
-                     checked: marketingEmails,
-                     onCheckedChange: setMarketingEmails
-                   }
-                 ].map((item) => (
-                   <div key={item.id} className="flex items-center justify-between p-4 rounded-xl border bg-muted/5">
-                      <div className="flex items-center gap-4">
-                         <div className="size-10 rounded-lg bg-background flex items-center justify-center border shadow-sm">
-                            <item.icon className="size-5 text-muted-foreground" />
-                         </div>
-                         <div>
-                            <p className="text-sm font-bold">{item.title}</p>
-                            <p className="text-xs text-muted-foreground">{item.desc}</p>
-                         </div>
-                      </div>
-                      <Switch 
-                        checked={item.checked} 
-                        onCheckedChange={item.onCheckedChange}
-                      />
-                   </div>
-                 ))}
-                 
-                 <div className="flex justify-end pt-4">
-                    <Button
-                      className="shadow-lg shadow-primary/20"
-                      disabled={updateMutation.isPending}
-                      onClick={() =>
-                        updateMutation.mutate({
-                          fullName,
-                          teamName,
-                          senderName,
-                          emailOnBooking,
-                          inAppOnBooking,
-                          weeklyDigest,
-                          marketingEmails,
-                        })
-                      }
-                    >
-                      <Save className="mr-2 size-4" />
-                      {updateMutation.isPending ? "Saving..." : "Save Changes"}
-                    </Button>
-                 </div>
-              </CardContent>
-           </Card>
-        </TabsContent>
-
-
-        <TabsContent value="security" className="space-y-6">
-           <Card className="max-w-3xl border-none shadow-sm">
-              <CardHeader>
-                 <CardTitle>Security Settings</CardTitle>
-                 <CardDescription>Keep your account and team data safe.</CardDescription>
-              </CardHeader>
-              <CardContent className="space-y-4">
-                 <div className="p-4 rounded-xl border border-dashed text-center">
-                    <Lock className="size-8 text-muted-foreground mx-auto mb-3 opacity-50" />
-                    <p className="text-sm font-medium">Password Management</p>
-                    <p className="text-xs text-muted-foreground mt-1 mb-4">Update your password to stay secure.</p>
-                    <Dialog open={showPasswordDialog} onOpenChange={setShowPasswordDialog}>
-                      <DialogTrigger asChild>
-                        <Button variant="outline" size="sm">Change Password</Button>
-                      </DialogTrigger>
-                      <DialogContent className="max-w-md">
-                        <DialogHeader>
-                          <DialogTitle>Change Password</DialogTitle>
-                          <DialogDescription>
-                            Enter your current password and a new secure password.
-                          </DialogDescription>
-                        </DialogHeader>
-                        <div className="space-y-4 py-4">
-                          <div className="space-y-2">
-                            <Label htmlFor="current-password">Current Password</Label>
-                            <Input
-                              id="current-password"
-                              type="password"
-                              value={currentPassword}
-                              onChange={(e) => setCurrentPassword(e.target.value)}
-                              className="h-11"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="new-password">New Password</Label>
-                            <Input
-                              id="new-password"
-                              type="password"
-                              value={newPassword}
-                              onChange={(e) => setNewPassword(e.target.value)}
-                              className="h-11"
-                            />
-                          </div>
-                          <div className="space-y-2">
-                            <Label htmlFor="confirm-password">Confirm New Password</Label>
-                            <Input
-                              id="confirm-password"
-                              type="password"
-                              value={confirmPassword}
-                              onChange={(e) => setConfirmPassword(e.target.value)}
-                              className="h-11"
-                            />
-                          </div>
-                          {passwordMutation.error && (
-                            <div className="p-3 bg-red-500/10 border border-red-500/20 rounded-xl text-red-600 text-sm font-bold">
-                              {(passwordMutation.error as Error).message}
-                            </div>
-                          )}
-                        </div>
-                        <DialogFooter>
-                          <Button variant="ghost" onClick={() => setShowPasswordDialog(false)}>Cancel</Button>
-                          <Button 
-                            disabled={!currentPassword || !newPassword || newPassword !== confirmPassword || passwordMutation.isPending}
-                            onClick={() => passwordMutation.mutate({ currentPassword, newPassword })}
-                          >
-                            {passwordMutation.isPending ? "Updating..." : "Update Password"}
-                          </Button>
-                        </DialogFooter>
-                      </DialogContent>
-                    </Dialog>
-                 </div>
-              </CardContent>
-           </Card>
-        </TabsContent>
-      </Tabs>
+        )}
+      </div>
     </div>
   )
 }

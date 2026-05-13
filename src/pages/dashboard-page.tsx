@@ -1,10 +1,14 @@
-import { useQuery } from "@tanstack/react-query"
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   Link2,
   Users,
   Calendar as CalendarIcon,
   Activity,
   ArrowUpRight,
+  Settings2,
+  Trash2,
+  Check,
+  X,
 } from "lucide-react"
 import { Link } from "react-router-dom"
 import { cn } from "@/lib/utils"
@@ -18,36 +22,33 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import {
-  getAuditLogs,
-  getBookingLinks,
-  getCurrentTeam,
-  getMeetings,
-  getDashboardSummary,
-} from "@/lib/api"
+import { getDashboardSummary, getAuditLogs, getBookingLinks, getCurrentTeam, getMeetings, updateTeam, deleteTeam } from "@/lib/api"
 import { useAuthStore } from "@/store/auth-store"
+import { useState } from "react"
+import { toast } from "sonner"
+import { Input } from "@/components/ui/input"
 
 export function DashboardPage() {
-  const user = useAuthStore((state) => state.user)
+  const { activeTeamId } = useAuthStore()
 
   const summaryQuery = useQuery({
-    queryKey: ["dashboard-summary"],
+    queryKey: ["dashboard-summary", activeTeamId],
     queryFn: getDashboardSummary,
   })
   const auditQuery = useQuery({
-    queryKey: ["audit-logs"],
+    queryKey: ["audit-logs", activeTeamId],
     queryFn: getAuditLogs,
   })
   const bookingLinksQuery = useQuery({
-    queryKey: ["booking-links"],
+    queryKey: ["booking-links", activeTeamId],
     queryFn: getBookingLinks,
   })
   const meetingsQuery = useQuery({
-    queryKey: ["meetings"],
+    queryKey: ["meetings", activeTeamId],
     queryFn: getMeetings,
   })
   const teamQuery = useQuery({
-    queryKey: ["current-team"],
+    queryKey: ["current-team", activeTeamId],
     queryFn: getCurrentTeam,
   })
 
@@ -226,6 +227,9 @@ export function DashboardPage() {
             </div>
           </CardContent>
         </Card>
+
+
+
       </div>
     </div>
   )

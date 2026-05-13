@@ -4,7 +4,7 @@ import * as React from "react"
 import { useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { format, isSameDay, parseISO } from "date-fns"
-import { motion, AnimatePresence } from "framer-motion"
+import { motion } from "framer-motion"
 
 import { Button } from "@/components/ui/button"
 import {
@@ -242,15 +242,20 @@ export function ManageBookingPage() {
                    <Button 
                     variant="outline" 
                     className="h-14 text-lg font-bold rounded-2xl gap-2 text-destructive hover:text-destructive hover:bg-destructive/10"
-                    disabled={cancelMutation.isPending}
+                    disabled={cancelMutation.isPending || !meeting.manageable}
                     onClick={() => cancelMutation.mutate()}
                    >
                       <XCircle className="size-5" /> {cancelMutation.isPending ? "Canceling..." : "Cancel"}
                    </Button>
                  </div>
                )}
+               {!meeting.manageable && !isCancelled && (
+                 <p className="text-center text-sm font-bold text-destructive">
+                   This meeting can no longer be modified as it has already started or passed.
+                 </p>
+               )}
                <p className="text-center text-sm text-muted-foreground pt-4">
-                 Need help? Contact <span className="font-bold text-foreground">{meeting.clientEmail}</span>
+                 Need help? Contact the organizer at <span className="font-bold text-foreground">{meeting.clientEmail}</span>
                </p>
             </div>
           </CardContent>
