@@ -19,7 +19,18 @@ import {
   SidebarMenuSubItem,
   SidebarRail,
 } from "@/components/ui/sidebar"
-import { Calendar, LayoutDashboard, Users, Mail, Settings, Bell, Code, Zap, Plus as PlusIcon, Minus as MinusIcon } from "lucide-react"
+import {
+  Calendar,
+  LayoutDashboard,
+  Users,
+  Mail,
+  Settings,
+  Bell,
+  Code,
+  Zap,
+  Plus as PlusIcon,
+  Minus as MinusIcon,
+} from "lucide-react"
 
 import { useLocation } from "react-router-dom"
 
@@ -103,23 +114,36 @@ const data = {
   ],
 }
 
-export function DocsSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) {
+export function DocsSidebar({
+  ...props
+}: React.ComponentProps<typeof Sidebar>) {
   const location = useLocation()
   const currentHash = location.hash || "#introduction"
 
   return (
-    <Sidebar {...props} className="border-r border-white/5 bg-background/50 backdrop-blur-xl">
+    <Sidebar
+      {...props}
+      className="border-r border-white/5 bg-background/50 backdrop-blur-xl"
+    >
       <SidebarHeader className="p-4">
         <SidebarMenu>
           <SidebarMenuItem>
-            <SidebarMenuButton size="lg" asChild className="hover:bg-primary/5 transition-colors rounded-xl">
+            <SidebarMenuButton
+              size="lg"
+              asChild
+              className="rounded-xl transition-colors hover:bg-primary/5"
+            >
               <a href="/">
                 <div className="flex aspect-square size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
                   <Calendar className="size-5" />
                 </div>
                 <div className="flex flex-col gap-0.5 leading-none">
-                  <span className="font-black uppercase tracking-tighter text-lg">Appointly</span>
-                  <span className="text-[10px] font-bold uppercase tracking-widest opacity-40">Docs v1.0</span>
+                  <span className="text-lg font-black tracking-tighter uppercase">
+                    Appointly
+                  </span>
+                  <span className="text-[10px] font-bold tracking-widest uppercase opacity-40">
+                    Docs v1.0
+                  </span>
                 </div>
               </a>
             </SidebarMenuButton>
@@ -140,7 +164,7 @@ export function DocsSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
               >
                 <SidebarMenuItem>
                   <CollapsibleTrigger asChild>
-                    <SidebarMenuButton className="font-black uppercase tracking-widest text-[10px] text-muted-foreground/60 hover:text-primary transition-colors">
+                    <SidebarMenuButton className="text-[10px] font-black tracking-widest text-muted-foreground/60 uppercase transition-colors hover:text-primary">
                       {item.title}{" "}
                       <PlusIcon className="ml-auto size-3 group-data-[state=open]/collapsible:hidden" />
                       <MinusIcon className="ml-auto size-3 group-data-[state=closed]/collapsible:hidden" />
@@ -148,18 +172,12 @@ export function DocsSidebar({ ...props }: React.ComponentProps<typeof Sidebar>) 
                   </CollapsibleTrigger>
                   {item.items?.length ? (
                     <CollapsibleContent>
-                      <SidebarMenuSub className="border-l border-white/5 ml-2 mt-1 gap-1">
+                      <SidebarMenuSub className="mt-1 ml-2 gap-1 border-l border-white/5">
                         {item.items.map((subItem) => (
                           <SidebarMenuSubItem key={subItem.title}>
                             <SidebarMenuSubButton
                               asChild
                               isActive={currentHash === subItem.url}
-                              className={`
-                                transition-all duration-200 rounded-md px-3 py-2 text-sm font-medium
-                                ${currentHash === subItem.url 
-                                  ? "bg-primary/10 text-primary shadow-sm ring-1 ring-primary/20" 
-                                  : "text-muted-foreground/70 hover:text-white hover:bg-white/5"}
-                              `}
                             >
                               <a href={subItem.url}>{subItem.title}</a>
                             </SidebarMenuSubButton>
