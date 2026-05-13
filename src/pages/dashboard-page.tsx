@@ -1,14 +1,10 @@
-import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
+import { useQuery } from "@tanstack/react-query"
 import {
   Link2,
   Users,
   Calendar as CalendarIcon,
   Activity,
   ArrowUpRight,
-  Settings2,
-  Trash2,
-  Check,
-  X,
 } from "lucide-react"
 import { Link } from "react-router-dom"
 import { cn } from "@/lib/utils"
@@ -22,11 +18,8 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import { getDashboardSummary, getAuditLogs, getBookingLinks, getCurrentTeam, getMeetings, updateTeam, deleteTeam } from "@/lib/api"
+import { getDashboardSummary, getAuditLogs, getBookingLinks, getCurrentTeam, getMeetings } from "@/lib/api"
 import { useAuthStore } from "@/store/auth-store"
-import { useState } from "react"
-import { toast } from "sonner"
-import { Input } from "@/components/ui/input"
 
 export function DashboardPage() {
   const { activeTeamId } = useAuthStore()

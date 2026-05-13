@@ -23,6 +23,7 @@ import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import { createTeam } from "@/lib/api"
 import { useAuthStore } from "@/store/auth-store"
+import type { TeamSummary } from "@/lib/types"
 
 const formSchema = z.object({
   name: z.string().min(2, "Team name must be at least 2 characters."),
@@ -48,7 +49,7 @@ export function CreateTeamDialog({
   const mutation = useMutation({
     mutationFn: createTeam,
     onSuccess: (data) => {
-      queryClient.setQueryData(["teams"], (old: any) => [...(old || []), data])
+      queryClient.setQueryData(["teams"], (old: TeamSummary[] | undefined) => [...(old || []), data])
       void queryClient.invalidateQueries()
       setActiveTeamId(data.id)
       onOpenChange(false)

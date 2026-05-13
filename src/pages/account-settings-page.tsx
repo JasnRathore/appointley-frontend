@@ -1,5 +1,5 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import {
   AlertCircle,
   Bell,
@@ -37,7 +37,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Textarea } from "@/components/ui/textarea"
 import {
   deleteAccount,
   getSettings,
@@ -45,7 +44,6 @@ import {
   updatePassword,
   updateSettings,
 } from "@/lib/api"
-import type { EmailTemplate, EmailType } from "@/lib/types"
 import { useAuthStore } from "@/store/auth-store"
 
 
@@ -104,11 +102,9 @@ export function AccountSettingsPage() {
     },
   })
 
-  useEffect(() => {
-    if (!settingsQuery.data) {
-      return
-    }
+  const [initialized, setInitialized] = useState(false)
 
+  if (settingsQuery.data && !initialized) {
     setFullName(settingsQuery.data.fullName)
     setTeamName(settingsQuery.data.teamName)
     setSenderName(settingsQuery.data.senderName)
@@ -116,7 +112,8 @@ export function AccountSettingsPage() {
     setInAppOnBooking(settingsQuery.data.inAppOnBooking)
     setWeeklyDigest(settingsQuery.data.weeklyDigest)
     setMarketingEmails(settingsQuery.data.marketingEmails)
-  }, [settingsQuery.data])
+    setInitialized(true)
+  }
 
 
   const updateMutation = useMutation({
@@ -139,7 +136,6 @@ export function AccountSettingsPage() {
   })
 
 
-  const templateError = null
 
   const saveGeneralSettings = () =>
     updateMutation.mutate({

@@ -21,13 +21,6 @@ import {
 } from "@/components/ui/sidebar"
 import {
   Calendar,
-  LayoutDashboard,
-  Users,
-  Mail,
-  Settings,
-  Bell,
-  Code,
-  Zap,
   Plus as PlusIcon,
   Minus as MinusIcon,
 } from "lucide-react"
@@ -156,7 +149,7 @@ export function DocsSidebar({
       <SidebarContent className="px-2">
         <SidebarGroup>
           <SidebarMenu className="gap-2">
-            {data.navMain.map((item, index) => (
+            {data.navMain.map((item) => (
               <Collapsible
                 key={item.title}
                 defaultOpen={true}

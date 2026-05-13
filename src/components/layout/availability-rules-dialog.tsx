@@ -48,11 +48,8 @@ export function AvailabilityRulesDialog({
   initialRules: AvailabilityRuleInput[]
 }) {
   const queryClient = useQueryClient()
-  const [schedule, setSchedule] = React.useState<DaySchedule[]>([])
-
-  // Initialize schedule from rules
-  React.useEffect(() => {
-    const newSchedule = weekdayOptions.map((day) => {
+  const [schedule, setSchedule] = React.useState<DaySchedule[]>(() => 
+    weekdayOptions.map((day) => {
       const dayRules = initialRules.filter((r) => r.dayOfWeek === day && r.active)
       return {
         day,
@@ -65,8 +62,7 @@ export function AvailabilityRulesDialog({
           : [{ startTime: "09:00", endTime: "17:00" }]
       }
     })
-    setSchedule(newSchedule)
-  }, [initialRules, open])
+  )
 
   const mutation = useMutation({
     mutationFn: replaceAvailabilityRules,

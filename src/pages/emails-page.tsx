@@ -1,10 +1,9 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useEffect, useState, useRef } from "react"
+import { useState, useRef } from "react"
 import { 
   Mail, 
   Save, 
   RotateCcw, 
-  CheckCircle2, 
   Info, 
   ExternalLink,
   ChevronRight,
@@ -32,7 +31,7 @@ import {
   resetEmailTemplate,
   updateEmailTemplate,
 } from "@/lib/api"
-import type { EmailTemplate, EmailType } from "@/lib/types"
+import type { EmailType } from "@/lib/types"
 import { useAuthStore } from "@/store/auth-store"
 import { cn } from "@/lib/utils"
 
@@ -56,9 +55,9 @@ export function EmailsPage() {
   const [selectedEmailType, setSelectedEmailType] = useState<EmailType | null>(null)
   const [templateDrafts, setTemplateDrafts] = useState<Record<string, TemplateDraft>>({})
 
-  useEffect(() => {
-    if (!emailTemplatesQuery.data) return
+  const [initialized, setInitialized] = useState(false)
 
+  if (emailTemplatesQuery.data && !initialized) {
     setTemplateDrafts(
       Object.fromEntries(
         emailTemplatesQuery.data.map((template) => [
@@ -72,11 +71,9 @@ export function EmailsPage() {
       )
     )
 
-    setSelectedEmailType((current) => {
-      if (current && emailTemplatesQuery.data.some((t) => t.type === current)) return current
-      return emailTemplatesQuery.data[0]?.type ?? null
-    })
-  }, [emailTemplatesQuery.data])
+    setSelectedEmailType(emailTemplatesQuery.data[0]?.type ?? null)
+    setInitialized(true)
+  }
 
   const saveTemplateMutation = useMutation({
     mutationFn: ({ type, payload }: { type: EmailType; payload: TemplateDraft }) => 

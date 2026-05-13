@@ -1,18 +1,14 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
-import { useEffect, useState } from "react"
+import { useState } from "react"
 import {
   AlertCircle,
   Save,
   Zap,
   Settings2,
   Trash2,
-  Check,
-  X,
 } from "lucide-react"
-import { useNavigate } from "react-router-dom"
 import { toast } from "sonner"
 
-import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -21,34 +17,19 @@ import {
   CardHeader,
   CardTitle,
 } from "@/components/ui/card"
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-  DialogTrigger,
-} from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Switch } from "@/components/ui/switch"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { Textarea } from "@/components/ui/textarea"
 import {
   getSettings,
   updateSettings,
   getCurrentTeam,
-  updateTeam,
   deleteTeam,
 } from "@/lib/api"
-import type { EmailTemplate, EmailType } from "@/lib/types"
 import { useAuthStore } from "@/store/auth-store"
 
 
 export function SettingsPage() {
   const queryClient = useQueryClient()
-  const navigate = useNavigate()
   const user = useAuthStore((state) => state.user)
   const accessToken = useAuthStore((state) => state.accessToken)
   const refreshToken = useAuthStore((state) => state.refreshToken)
@@ -73,21 +54,19 @@ export function SettingsPage() {
   const [inAppOnBooking, setInAppOnBooking] = useState(true)
   const [weeklyDigest, setWeeklyDigest] = useState(false)
   const [marketingEmails, setMarketingEmails] = useState(false)
-  const [isEditingName, setIsEditingName] = useState(false)
-  const [newWorkspaceName, setNewWorkspaceName] = useState("")
 
-  const updateTeamMutation = useMutation({
-    mutationFn: updateTeam,
-    onSuccess: () => {
-      void queryClient.invalidateQueries({ queryKey: ["current-team"] })
-      void queryClient.invalidateQueries({ queryKey: ["teams"] })
-      toast.success("Workspace renamed successfully")
-      setIsEditingName(false)
-    },
-    onError: (error: any) => {
-      toast.error(error.message || "Failed to rename workspace")
-    }
-  })
+  const [initialized, setInitialized] = useState(false)
+
+  if (settingsQuery.data && !initialized) {
+    setFullName(settingsQuery.data.fullName)
+    setTeamName(settingsQuery.data.teamName)
+    setSenderName(settingsQuery.data.senderName)
+    setEmailOnBooking(settingsQuery.data.emailOnBooking)
+    setInAppOnBooking(settingsQuery.data.inAppOnBooking)
+    setWeeklyDigest(settingsQuery.data.weeklyDigest)
+    setMarketingEmails(settingsQuery.data.marketingEmails)
+    setInitialized(true)
+  }
 
   const deleteTeamMutation = useMutation({
     mutationFn: deleteTeam,
@@ -96,24 +75,11 @@ export function SettingsPage() {
       toast.success("Workspace deleted")
       // Auth store or sidebar will handle the redirect since activeTeamId is cleared
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message || "Failed to delete workspace")
     }
   })
 
-  useEffect(() => {
-    if (!settingsQuery.data) {
-      return
-    }
-
-    setFullName(settingsQuery.data.fullName)
-    setTeamName(settingsQuery.data.teamName)
-    setSenderName(settingsQuery.data.senderName)
-    setEmailOnBooking(settingsQuery.data.emailOnBooking)
-    setInAppOnBooking(settingsQuery.data.inAppOnBooking)
-    setWeeklyDigest(settingsQuery.data.weeklyDigest)
-    setMarketingEmails(settingsQuery.data.marketingEmails)
-  }, [settingsQuery.data])
 
 
   const updateMutation = useMutation({
@@ -136,7 +102,6 @@ export function SettingsPage() {
   })
 
 
-  const templateError = null
 
   const saveGeneralSettings = () =>
     updateMutation.mutate({
@@ -150,7 +115,6 @@ export function SettingsPage() {
     })
 
   const teamData = teamQuery.data
-  const members = teamData?.members ?? []
   const isOwner = teamData?.team.ownerId === user?.id
 
   return (

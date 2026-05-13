@@ -22,7 +22,6 @@ import {
 } from "@/components/ui/form"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
-import { Switch } from "@/components/ui/switch"
 import { createBookingLink } from "@/lib/api"
 
 const formSchema = z.object({

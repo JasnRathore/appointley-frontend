@@ -78,8 +78,8 @@ export function LoginForm({
       } else {
         navigate("/dashboard")
       }
-    } catch (err: any) {
-      setError(err.message || "Invalid email or password")
+    } catch (err: unknown) {
+      setError((err as Error).message || "Invalid email or password")
     } finally {
       setIsLoading(false)
     }

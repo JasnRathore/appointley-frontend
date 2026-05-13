@@ -5,7 +5,6 @@ import {
   Shield, 
   UserMinus, 
   Users, 
-  UserCheck,
   ArrowRight,
   Copy,
   ExternalLink,
@@ -32,7 +31,6 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import {
-  acceptTeamInvite,
   createTeam,
   getCurrentTeam,
   inviteTeamMember,
@@ -50,7 +48,6 @@ export function TeamPage() {
   const queryClient = useQueryClient()
   const [inviteEmail, setInviteEmail] = useState("")
   const [inviteRole, setInviteRole] = useState<TeamRole>("MEMBER")
-  const [acceptToken, setAcceptToken] = useState("")
   const [newTeamName, setNewTeamName] = useState("")
   
   const teamQuery = useQuery({
@@ -68,14 +65,6 @@ export function TeamPage() {
     },
   })
 
-  const acceptMutation = useMutation({
-    mutationFn: acceptTeamInvite,
-    onSuccess: () => {
-      setAcceptToken("")
-      void queryClient.invalidateQueries({ queryKey: ["team-current"] })
-      void queryClient.invalidateQueries({ queryKey: ["dashboard-summary"] })
-    },
-  })
 
   const roleMutation = useMutation({
     mutationFn: ({
@@ -101,7 +90,7 @@ export function TeamPage() {
     mutationFn: createTeam,
     onSuccess: (data) => {
       setNewTeamName("")
-      queryClient.setQueryData(["teams"], (old: any) => [...(old || []), data])
+      queryClient.setQueryData(["teams"], (old: unknown[]) => [...(old || []), data])
       setActiveTeamId(data.id)
       void queryClient.invalidateQueries()
       toast.success(`Team "${data.name}" created!`)
@@ -114,7 +103,7 @@ export function TeamPage() {
       void queryClient.invalidateQueries({ queryKey: ["team-current"] })
       toast.success("Invitation canceled")
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message || "Failed to cancel invitation")
     },
   })
@@ -162,7 +151,6 @@ export function TeamPage() {
   const teamData = teamQuery.data
   const members = teamData?.members ?? []
   const invites = teamData?.pendingInvites ?? []
-  const isOwner = teamData?.team.ownerId === user?.id
 
   return (
     <div className="flex flex-col gap-8 pb-8">

@@ -20,7 +20,9 @@ type AuthState = AuthSnapshot & {
     accessToken: string,
     refreshToken: string,
     user: AuthUser,
-    oauthEnabled?: boolean
+    oauthEnabled?: boolean,
+    activeTeamId?: string | null,
+    joinedTeamId?: string | null
   ) => void
   setActiveTeamId: (teamId: string | null) => void
   clearSession: () => void

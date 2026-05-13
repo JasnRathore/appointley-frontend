@@ -14,11 +14,7 @@ import {
   SidebarTrigger,
 } from "@/components/ui/sidebar"
 import {
-  Info,
-  Lightbulb,
   ShieldCheck,
-  Zap,
-  ArrowRight,
   CheckCircle2,
   LayoutDashboard,
   Activity,

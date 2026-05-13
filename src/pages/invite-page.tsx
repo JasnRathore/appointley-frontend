@@ -1,5 +1,4 @@
-import * as React from "react"
-import { useParams, useNavigate, useSearchParams } from "react-router-dom"
+import { useParams, useNavigate } from "react-router-dom"
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
 import { Check, Loader2, UserPlus, LogIn, ArrowRight, AlertCircle, LogOut } from "lucide-react"
 
@@ -31,7 +30,7 @@ export default function InvitePage() {
       setActiveTeamId(data.team.id)
       navigate("/dashboard")
     },
-    onError: (error: any) => {
+    onError: (error: Error) => {
       toast.error(error.message || "Failed to accept invitation")
     }
   })

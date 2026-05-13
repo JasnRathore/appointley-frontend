@@ -1,6 +1,6 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import { ChevronLeft, ChevronRight, Grid2x2, Timer, Settings2, ShieldAlert, Rows3, Users, Clock, Calendar as CalendarIcon, XCircle, ExternalLink } from "lucide-react"
-import { useEffect, useMemo, useState } from "react"
+import { useMemo, useState } from "react"
 import { format, parseISO } from "date-fns"
 
 import { Button } from "@/components/ui/button"
@@ -29,7 +29,7 @@ import {
   formatTimeLabel,
   type CalendarView,
 } from "@/lib/calendar"
-import type { AvailabilityRuleInput, Meeting } from "@/lib/types"
+import type { Meeting, BlockedDate } from "@/lib/types"
 import { AvailabilityRulesDialog } from "@/components/layout/availability-rules-dialog"
 import { BlockedWindowsDialog } from "@/components/layout/blocked-windows-dialog"
 import { RescheduleDialog } from "@/components/layout/reschedule-dialog"
@@ -53,7 +53,6 @@ export function CalendarPage() {
   const queryClient = useQueryClient()
   const [view, setView] = useState<CalendarView>("week")
   const [selectedDate, setSelectedDate] = useState(() => new Date())
-  const [rules, setRules] = useState<AvailabilityRuleInput[]>([])
   const [showRulesDialog, setShowRulesDialog] = useState(false)
   const [showBlockedDialog, setShowBlockedDialog] = useState(false)
   
@@ -84,19 +83,6 @@ export function CalendarPage() {
     queryFn: getMeetings,
   })
 
-  useEffect(() => {
-    if (rulesQuery.data) {
-      setRules(
-        rulesQuery.data.map((rule) => ({
-          dayOfWeek: rule.dayOfWeek,
-          startTime: rule.startTime,
-          endTime: rule.endTime,
-          slotDurationMinutes: rule.slotDurationMinutes,
-          active: rule.active,
-        }))
-      )
-    }
-  }, [rulesQuery.data])
 
   const scheduledMeetings = useMemo(
     () =>
@@ -270,11 +256,13 @@ export function CalendarPage() {
         </main>
       </div>
 
-      <AvailabilityRulesDialog 
-        open={showRulesDialog} 
-        onOpenChange={setShowRulesDialog} 
-        initialRules={rules}
-      />
+      {showRulesDialog && (
+        <AvailabilityRulesDialog 
+          open={showRulesDialog} 
+          onOpenChange={setShowRulesDialog} 
+          initialRules={rulesQuery.data ?? []}
+        />
+      )}
       <BlockedWindowsDialog 
         open={showBlockedDialog} 
         onOpenChange={setShowBlockedDialog} 
@@ -363,7 +351,7 @@ function PlannerViewButton({
   onClick,
 }: {
   active: boolean
-  icon: any
+  icon: React.ElementType
   label: string
   onClick: () => void
 }) {
@@ -388,7 +376,13 @@ function MonthPlanner({
   selectedDate,
   onSelectDate,
   onSelectMeeting,
-}: any) {
+}: {
+  meetings: Meeting[]
+  selectedDate: Date
+  onSelectDate: (date: Date) => void
+  onSelectMeeting: (meeting: Meeting) => void
+  blockedDates?: BlockedDate[]
+}) {
   const weeks = chunkIntoWeeks(getMonthGridDays(selectedDate))
 
   return (
@@ -404,9 +398,9 @@ function MonthPlanner({
         ))}
       </div>
       <div className="grid grid-rows-6">
-        {weeks.map((week: any) => (
+        {weeks.map((week) => (
           <div key={week[0].toISOString()} className="grid grid-cols-7">
-            {week.map((day: any) => {
+            {week.map((day) => {
               const dayMeetings = getDayMeetings(meetings, day)
               const isToday = isSameDay(day, new Date())
               const isSelected = isSameDay(day, selectedDate)
@@ -434,7 +428,7 @@ function MonthPlanner({
                     {dayMeetings.length > 0 && <div className="size-1.5 rounded-full bg-primary/40" />}
                   </div>
                   <div className="space-y-1.5">
-                    {dayMeetings.slice(0, 3).map((meeting: any) => (
+                    {dayMeetings.slice(0, 3).map((meeting) => (
                       <div
                         key={meeting.id}
                         onClick={(e) => {
@@ -467,7 +461,15 @@ function TimePlanner({
   hours,
   meetings,
   onSelectMeeting,
-}: any) {
+}: {
+  days: Date[]
+  hours: number[]
+  meetings: Meeting[]
+  onSelectMeeting: (meeting: Meeting) => void
+  blockedDates?: BlockedDate[]
+  selectedDate?: Date
+  onSelectDate?: (date: Date) => void
+}) {
   const columnTemplate = `72px repeat(${days.length}, 1fr)`
   const totalHeight = hours.length * plannerHourHeight
 
@@ -480,7 +482,7 @@ function TimePlanner({
           style={{ gridTemplateColumns: columnTemplate }}
         >
           <div className="border-r border-border/50" />
-          {days.map((day: any) => (
+          {days.map((day) => (
             <div
               key={day.toISOString()}
               className="px-4 py-5 text-center border-r border-border/50 last:border-r-0"
@@ -511,7 +513,7 @@ function TimePlanner({
           >
             {/* Hour Labels Column */}
             <div className="border-r border-border/50 bg-muted/5">
-              {hours.map((hour: any) => (
+              {hours.map((hour) => (
                 <div
                   key={hour}
                   className="relative border-b border-border/50"
@@ -525,7 +527,7 @@ function TimePlanner({
             </div>
 
             {/* Day Columns */}
-            {days.map((day: any) => {
+            {days.map((day) => {
               const dayMeetings = getDayMeetings(meetings, day)
               const eventLayouts = getEventLayouts(dayMeetings)
 
@@ -534,14 +536,14 @@ function TimePlanner({
                   key={day.toISOString()}
                   className="relative border-r border-border/50 last:border-r-0 hover:bg-muted/5 transition-colors"
                 >
-                  {hours.map((hour: any) => (
+                  {hours.map((hour) => (
                     <div
                       key={hour}
                       className="border-b border-border/50 border-dashed h-[80px]"
                     />
                   ))}
 
-                  {eventLayouts.map((layout: any) => (
+                  {eventLayouts.map((layout) => (
                     <div
                       key={layout.meeting.id}
                       onClick={() => onSelectMeeting(layout.meeting)}

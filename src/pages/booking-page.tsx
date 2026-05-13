@@ -1,6 +1,5 @@
 import { useMutation, useQuery } from "@tanstack/react-query"
 import { CalendarClock, CheckCircle2, ChevronRight, Clock, Globe, ArrowLeft, User, Mail, MessageSquare, ExternalLink } from "lucide-react"
-import * as React from "react"
 import { useMemo, useState } from "react"
 import { useParams, useNavigate } from "react-router-dom"
 import { format, isSameDay, parseISO } from "date-fns"
@@ -72,11 +71,12 @@ export function BookingPage() {
     return slotsByDate[dateStr] ?? []
   }, [selectedDate, slotsByDate])
 
-  React.useEffect(() => {
-    if (bookingQuery.data?.recipientEmail) {
-      setClientEmail(bookingQuery.data.recipientEmail)
-    }
-  }, [bookingQuery.data])
+  const [initialized, setInitialized] = useState(false)
+
+  if (bookingQuery.data?.recipientEmail && !initialized) {
+    setClientEmail(bookingQuery.data.recipientEmail)
+    setInitialized(true)
+  }
 
   const handleDateSelect = (date: Date | undefined) => {
     setSelectedDate(date)

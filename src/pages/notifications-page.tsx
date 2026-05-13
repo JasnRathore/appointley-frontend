@@ -11,6 +11,7 @@ import {
 import { Badge } from "@/components/ui/badge"
 import { getNotifications, markNotificationAsRead, markAllNotificationsAsRead } from "@/lib/api"
 import { cn } from "@/lib/utils"
+import type { Notification } from "@/lib/types"
 
 export function NotificationsPage() {
   const queryClient = useQueryClient()
@@ -35,7 +36,7 @@ export function NotificationsPage() {
     },
   })
 
-  const handleNotificationClick = (notification: any) => {
+  const handleNotificationClick = (notification: Notification) => {
     if (!notification.isRead) {
       markReadMutation.mutate(notification.id)
     }

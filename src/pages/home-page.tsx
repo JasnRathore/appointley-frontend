@@ -63,9 +63,9 @@ export default function Home() {
 
   useEffect(() => {
     const initUnicorn = () => {
-      // @ts-ignore
+      // @ts-expect-error - UnicornStudio is added via script tag
       if (window.UnicornStudio && window.UnicornStudio.init) {
-        // @ts-ignore
+        // @ts-expect-error - UnicornStudio is added via script tag
         window.UnicornStudio.init();
       }
     };
@@ -372,7 +372,19 @@ export default function Home() {
   );
 }
 
-function TestimonialCard({ name, role, company, quote, avatar }: any) {
+function TestimonialCard({ 
+  name, 
+  role, 
+  company, 
+  quote, 
+  avatar 
+}: { 
+  name: string
+  role: string
+  company: string
+  quote: string
+  avatar: string
+}) {
   return (
     <Card className="min-w-[450px] bg-white/[0.03] backdrop-blur-xl border-white/5 hover:border-primary/20 transition-all cursor-default select-none shadow-2xl rounded-none group overflow-hidden">
       <CardContent className="p-10 space-y-8 relative">
