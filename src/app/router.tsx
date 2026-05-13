@@ -22,10 +22,6 @@ import PricingPage from "@/pages/pricing-page"
 import DocsPage from "@/pages/docs-page"
 
 export const router = createBrowserRouter([
-//  {
-//    path: "/",
-//    element: <Navigate to="/dashboard" replace />,
-//  },
   {
     path: "/",
     element: <HomePage />,
@@ -71,41 +67,55 @@ export const router = createBrowserRouter([
     element: <InvitePage />,
   },
   {
-    path: "/",
     element: <ProtectedRoute />,
     children: [
       {
-        path: "dashboard",
+        path: "/dashboard",
         element: <DashboardPage />,
       },
       {
-        path: "team",
+        path: "/team",
         element: <TeamPage />,
       },
       {
-        path: "calendar",
+        path: "/calendar",
         element: <CalendarPage />,
       },
       {
-        path: "meetings",
+        path: "/meetings",
         element: <MeetingsPage />,
       },
       {
-        path: "settings",
+        path: "/settings",
         element: <SettingsPage />,
       },
       {
-        path: "account",
+        path: "/account",
         element: <AccountSettingsPage />,
       },
       {
-        path: "emails",
+        path: "/emails",
         element: <EmailsPage />,
       },
       {
-        path: "notifications",
+        path: "/notifications",
         element: <NotificationsPage />,
       },
     ],
+  },
+  {
+    path: "*",
+    element: (
+      <div className="flex h-screen w-full flex-col items-center justify-center gap-4 text-center">
+        <h1 className="text-4xl font-bold">404 - Page Not Found</h1>
+        <p className="text-muted-foreground">The page you are looking for does not exist.</p>
+        <button 
+          onClick={() => window.location.href = "/"}
+          className="rounded-md bg-primary px-4 py-2 text-primary-foreground hover:bg-primary/90"
+        >
+          Go Home
+        </button>
+      </div>
+    ),
   },
 ])

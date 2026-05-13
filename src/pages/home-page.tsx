@@ -4,6 +4,8 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { useRef, useEffect, useState } from 'react';
+import { Link, useNavigate } from "react-router-dom";
+
 
 const testimonials = [
   { name: "Sarah Chen", role: "Product Lead", company: "TechFlow", quote: "Appointly has completely transformed our scheduling flow.", avatar: "SC" },
@@ -58,8 +60,10 @@ const features = [
 ];
 
 export default function Home() {
+  const navigate = useNavigate();
   const containerRef = useRef(null);
   const [hoveredIdx, setHoveredIdx] = useState<number | null>(null);
+
 
   useEffect(() => {
     const initUnicorn = () => {
@@ -102,19 +106,21 @@ export default function Home() {
 
           <div className="hidden lg:flex items-center gap-x-12">
             {["Product", "Pricing", "Docs"].map((link) => (
-              <a key={link} href={`/${link.toLowerCase()}`} className="text-xs font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">
+              <Link key={link} to={`/${link.toLowerCase()}`} className="text-xs font-black uppercase tracking-widest text-muted-foreground hover:text-primary transition-colors">
                 {link}
-              </a>
+              </Link>
             ))}
           </div>
 
+
           <div className="flex items-center gap-4">
-            <Button onClick={() => location.href="/login"} variant="secondary" className="hidden sm:inline-flex px-6 font-black uppercase tracking-widest border-none bg-white/5 hover:bg-white/10 text-white/70">
+            <Button onClick={() => navigate("/login")} variant="secondary" className="hidden sm:inline-flex px-6 font-black uppercase tracking-widest border-none bg-white/5 hover:bg-white/10 text-white/70">
               Login
             </Button>
-            <Button onClick={() => location.href="/register"} className="px-6 font-black uppercase tracking-widest shadow-xl shadow-primary/20 brightness-110">
+            <Button onClick={() => navigate("/register")} className="px-6 font-black uppercase tracking-widest shadow-xl shadow-primary/20 brightness-110">
               Join up
             </Button>
+
             <Button variant="ghost" size="icon" className="lg:hidden text-white/70">
               <Menu className="w-6 h-6" />
             </Button>
@@ -345,11 +351,12 @@ export default function Home() {
               <ul className="space-y-6 text-white/40 font-black uppercase tracking-widest text-[10px]">
                 {cat === "Product" ? (
                   <>
-                    <li><a href="/product" className="hover:text-primary transition-colors">Product</a></li>
-                    <li><a href="/pricing" className="hover:text-primary transition-colors">Pricing</a></li>
-                    <li><a href="/docs" className="hover:text-primary transition-colors">Docs</a></li>
+                    <li><Link to="/product" className="hover:text-primary transition-colors">Product</Link></li>
+                    <li><Link to="/pricing" className="hover:text-primary transition-colors">Pricing</Link></li>
+                    <li><Link to="/docs" className="hover:text-primary transition-colors">Docs</Link></li>
                   </>
                 ) : (
+
                   <>
                     <li><a href="#" className="hover:text-primary transition-colors">About Appointly</a></li>
                     <li><a href="#" className="hover:text-primary transition-colors">Contact Press</a></li>

@@ -25,7 +25,7 @@ import {
   Minus as MinusIcon,
 } from "lucide-react"
 
-import { useLocation } from "react-router-dom"
+import { useLocation, Link } from "react-router-dom"
 
 // This is sample data.
 const data = {
@@ -126,7 +126,7 @@ export function DocsSidebar({
               asChild
               className="rounded-xl transition-colors hover:bg-primary/5"
             >
-              <a href="/">
+              <Link to="/">
                 <div className="flex aspect-square size-10 items-center justify-center rounded-xl bg-primary text-primary-foreground shadow-lg shadow-primary/20">
                   <Calendar className="size-5" />
                 </div>
@@ -138,7 +138,7 @@ export function DocsSidebar({
                     Docs v1.0
                   </span>
                 </div>
-              </a>
+              </Link>
             </SidebarMenuButton>
           </SidebarMenuItem>
         </SidebarMenu>
@@ -146,6 +146,7 @@ export function DocsSidebar({
           <SearchForm />
         </div>
       </SidebarHeader>
+
       <SidebarContent className="px-2">
         <SidebarGroup>
           <SidebarMenu className="gap-2">

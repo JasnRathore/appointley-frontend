@@ -1,4 +1,6 @@
+import { Link } from "react-router-dom"
 import { DocsSidebar } from "@/components/docs/docs-sidebar"
+
 import {
   Breadcrumb,
   BreadcrumbItem,
@@ -35,12 +37,13 @@ export default function DocsPage() {
             <BreadcrumbList>
               <BreadcrumbItem>
                 <BreadcrumbLink
-                  href="/"
+                  asChild
                   className="text-xs font-bold tracking-widest text-muted-foreground/50 uppercase transition-colors hover:text-primary"
                 >
-                  Home
+                  <Link to="/">Home</Link>
                 </BreadcrumbLink>
               </BreadcrumbItem>
+
               <BreadcrumbSeparator className="text-white/10" />
               <BreadcrumbItem>
                 <BreadcrumbPage className="text-xs font-bold tracking-widest text-white/90 uppercase">
