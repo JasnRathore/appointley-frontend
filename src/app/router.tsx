@@ -118,4 +118,9 @@ export const router = createBrowserRouter([
       </div>
     ),
   },
-])
+],
+   {
+    basename: "/appointley",
+  },
+
+)
